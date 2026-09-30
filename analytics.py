@@ -160,17 +160,17 @@ def score_quality(days: int = 30) -> dict:
     skipped = stats.get("skipped", {}).get("avg_score")
     gap = round(taken - skipped, 1) if taken is not None and skipped is not None else None
 
-    verdict = "ma'lumot yetarli emas"
+    verdict = "недостаточно данных"
     if gap is not None:
         total = stats["taken"]["n"] + stats["skipped"]["n"]
         if total < 20:
-            verdict = f"ma'lumot kam ({total} ta qaror)"
+            verdict = f"мало данных (решений: {total})"
         elif gap >= 10:
-            verdict = "ball qarorlarga mos — formula ishlayapti"
+            verdict = "балл совпадает с решениями — формула работает"
         elif gap > 0:
-            verdict = "farq kichik — og'irliklarni ko'rib chiqish kerak"
+            verdict = "разница небольшая — стоит пересмотреть веса"
         else:
-            verdict = "⚠️ ball teskari ishlayapti — formulani qayta ko'ring"
+            verdict = "⚠️ балл работает наоборот — пересмотрите формулу"
 
     return {"taken": stats.get("taken"), "skipped": stats.get("skipped"),
             "gap": gap, "verdict": verdict}
@@ -186,7 +186,7 @@ def margin_accuracy(days: int = 90) -> dict:
 
     if not rows:
         return {"n": 0, "avg_error_pct": None, "bias_pct": None,
-                "verdict": "haqiqiy marja kiritilmagan (/done)"}
+                "verdict": "фактическая маржа не введена (/done)"}
 
     errors, biases = [], []
     for r in rows:
@@ -199,7 +199,7 @@ def margin_accuracy(days: int = 90) -> dict:
 
     if not errors:
         return {"n": 0, "avg_error_pct": None, "bias_pct": None,
-                "verdict": "ma'lumot yetarli emas"}
+                "verdict": "недостаточно данных"}
 
     avg_error = round(sum(errors) / len(errors), 1)
     bias = round(sum(biases) / len(biases), 1)
@@ -208,12 +208,12 @@ def margin_accuracy(days: int = 90) -> dict:
     # tomonga og'ish xarajat parametrlari noto'g'ri ekanini ko'rsatadi va
     # uni `config.Costs` da to'g'rilash mumkin. Tasodifiy xatoni esa
     # to'g'rilab bo'lmaydi.
-    drift = ("prognoz optimistik — xarajatlar oshirilsin (config.Costs)"
-             if bias < 0 else "prognoz ehtiyotkor — xarajatlar kamaytirilsin")
+    drift = ("прогноз оптимистичный — увеличьте расходы (config.Costs)"
+             if bias < 0 else "прогноз осторожный — уменьшите расходы")
     if avg_error <= 15:
-        verdict = "prognoz aniq (TZ mezoni: <15%)"
+        verdict = "прогноз точный (критерий ТЗ: <15%)"
         if abs(bias) >= 5:
-            verdict += f", lekin doimiy og'ish bor: {drift}"
+            verdict += f", но есть постоянное отклонение: {drift}"
     else:
         verdict = drift
     return {"n": len(errors), "avg_error_pct": avg_error, "bias_pct": bias,

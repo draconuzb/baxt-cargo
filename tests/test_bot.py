@@ -454,7 +454,7 @@ def test_start_shows_main_keyboard(clean_db, tg, monkeypatch):
     kb = [c for c in tg if c["method"] == "sendMessage" and c.get("reply_markup")]
     assert kb, "doimiy tugmalar paneli yo'q"
     keys = str(kb[0]["reply_markup"])
-    assert "Qidiruv" in keys and "Park" in keys
+    assert "Поиск" in keys and "Парк" in keys
 
 
 def test_menu_buttons_route(scene, tg):
@@ -514,3 +514,40 @@ def test_notifier_broadcasts_to_registered_chats(clean_db, monkeypatch):
                         lambda chat, text, kb, token: sent.append(chat) or {"ok": True})
     notifier.send("тест")
     assert sent == ["111", "222"]
+
+
+# ---------------------------------------------------------------- ruscha chiqish
+
+def test_old_uzbek_menu_buttons_still_work(scene, tg):
+    """Telefonda eski klaviatura qolgan bo'lsa ham tugma ishlaydi."""
+    bot.handle_message(message("🚛 Park"))
+    assert "Наш парк" in tg.texts()[-1]
+
+
+def test_api_sends_russian_city_names(monkeypatch):
+    """Har qanday Telegram xabarida shahar nomi ruscha; callback_data o'zgarmaydi."""
+    import json as _json
+    monkeypatch.setattr(config, "BOT_TOKEN", "t")
+    seen = {}
+
+    class Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b'{"ok": true}'
+
+    def fake_urlopen(req, timeout=15):
+        seen.update(_json.loads(req.data))
+        return Resp()
+
+    monkeypatch.setattr(bot.urllib.request, "urlopen", fake_urlopen)
+    bot.send(1, "Груз Toshkent → Moskva", {"inline_keyboard": [[
+        {"text": "✅ Беру (Toshkent→Moskva)", "callback_data": "watch:Toshkent|Moskva"}]]})
+    assert seen["text"] == "Груз Ташкент → Москва"
+    button = seen["reply_markup"]["inline_keyboard"][0][0]
+    assert button["text"] == "✅ Беру (Ташкент→Москва)"
+    assert button["callback_data"] == "watch:Toshkent|Moskva"

@@ -144,7 +144,7 @@ def test_score_quality_detects_working_formula(clean_db):
 
     result = analytics.score_quality()
     assert result["gap"] == 25.0
-    assert "ishlayapti" in result["verdict"]
+    assert "работает" in result["verdict"]
 
 
 def test_score_quality_detects_broken_formula(clean_db):
@@ -156,7 +156,7 @@ def test_score_quality_detects_broken_formula(clean_db):
 
     result = analytics.score_quality()
     assert result["gap"] < 0
-    assert "teskari" in result["verdict"]
+    assert "наоборот" in result["verdict"]
 
 
 def test_score_quality_without_data(clean_db):
@@ -182,14 +182,14 @@ def test_margin_accuracy(clean_db):
     assert result["n"] == 2
     assert result["avg_error_pct"] == 10.0
     assert result["bias_pct"] == -10.0
-    assert "optimistik" in result["verdict"]      # doimiy og'ish ko'rsatiladi
+    assert "оптимистичный" in result["verdict"]   # doimiy og'ish ko'rsatiladi
 
 
 def test_margin_accuracy_far_off(clean_db):
     add_match(add_cargo(), margin=1000.0, actual=400.0, decision="taken")
     result = analytics.margin_accuracy()
     assert result["avg_error_pct"] == 60.0
-    assert "optimistik" in result["verdict"]
+    assert "оптимистичный" in result["verdict"]
 
 
 def test_margin_accuracy_within_target(clean_db):
@@ -197,7 +197,7 @@ def test_margin_accuracy_within_target(clean_db):
     add_match(add_cargo(), margin=1000.0, actual=1020.0, decision="taken")
     add_match(add_cargo(), margin=1000.0, actual=980.0, decision="taken")
     verdict = analytics.margin_accuracy()["verdict"]
-    assert "aniq" in verdict and "og'ish" not in verdict
+    assert "точный" in verdict and "отклонение" not in verdict
 
 
 def test_margin_accuracy_without_data(clean_db):

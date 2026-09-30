@@ -85,7 +85,7 @@ def _explain(cargo: dict, result: dict, others: list[dict], with_return: bool) -
                 lines.append(f"🔁 Обратно есть: {b.get('from_city')} → {b.get('to_city')} "
                              f"#{b.get('id')} · круг {_money(chains[0]['total_margin_usd'])}")
             elif cargo.get("to_city"):
-                lines.append(f"🔁 Из {cargo['to_city']} обратного груза пока нет")
+                lines.append(f"🔁 Из г. {cargo['to_city']} обратного груза пока нет")
 
     # 5. Kompaniya qoidalari ta'siri
     for note in result.get("rules", [])[:2]:

@@ -174,3 +174,31 @@ def test_reset_limits(sent, monkeypatch):
     notifier.notify_match(CARGO, RESULT, 1)
     notifier.reset_limits()
     assert notifier.notify_match(CARGO, RESULT, 2) is True
+
+
+def test_dispatcher_message_has_russian_city_names(monkeypatch):
+    """Bildirishnoma ham ruscha: "Toshkent" -> "Ташкент", callback_data esa kanonik."""
+    import json as _json
+    from urllib.parse import parse_qs
+    seen = {}
+
+    class Resp:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *a):
+            return False
+
+        def read(self):
+            return b'{"ok": true}'
+
+    def fake_urlopen(req, timeout=15):
+        seen.update({k: v[0] for k, v in parse_qs(req.data.decode()).items()})
+        return Resp()
+
+    monkeypatch.setattr(notifier.urllib.request, "urlopen", fake_urlopen)
+    notifier._send_to("1", "<b>Toshkent → Moskva</b>",
+                      {"inline_keyboard": [[{"text": "Qozon", "callback_data": "x:Qozon"}]]}, "t")
+    assert seen["text"] == "<b>Ташкент → Москва</b>"
+    markup = _json.loads(seen["reply_markup"])
+    assert markup["inline_keyboard"][0][0] == {"text": "Казань", "callback_data": "x:Qozon"}

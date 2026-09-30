@@ -138,14 +138,14 @@ def test_logout(client):
 def test_dashboard_shows_trucks_and_offers(client):
     html = client.get("/").text
     assert "№01" in html and "№02" in html
-    assert "Toshkent → Moskva" in html
-    assert "Olaman" in html
+    assert "Ташкент → Москва" in html
+    assert "Беру" in html
 
 
 def test_dashboard_without_trucks(client, clean_db):
     with clean_db.connect() as conn:
         conn.execute("DELETE FROM trucks")
-    assert "Park bo'sh" in client.get("/").text
+    assert "Парк пуст" in client.get("/").text
 
 
 # ---------------------------------------------------------------- qarorlar
@@ -165,7 +165,7 @@ def test_take_htmx(client, app_env):
     m = best_match(app_env["cargo_id"])
     r = client.post(f"/match/{m['id']}/take", headers={"HX-Request": "true"})
     # sahifadan chiqib ketmaydi — o'sha joyda qaysi fura olgani aniq yoziladi
-    assert "Olindi" in r.text and "Fura №" in r.text and "Bekor qilish" in r.text
+    assert "Груз взят" in r.text and "Фура №" in r.text and "Отменить" in r.text
 
 
 def test_panel_and_bot_share_one_claim(client, app_env):
@@ -174,7 +174,7 @@ def test_panel_and_bot_share_one_claim(client, app_env):
     assert actions.take_match(matches[0]["id"]).ok          # "bot" oldi
 
     r = client.post(f"/match/{matches[1]['id']}/take", headers={"HX-Request": "true"})
-    assert "Allaqachon olingan" in r.text
+    assert "Уже взят" in r.text
     assert db.taken_truck_for_cargo(app_env["cargo_id"]) == matches[0]["truck_id"]
 
 
@@ -184,14 +184,14 @@ def test_taken_cargo_page_suggests_return(client, app_env, monkeypatch):
     m = best_match(app_env["cargo_id"])
     client.post(f"/match/{m['id']}/take")
     html = client.get(f"/cargo/{app_env['cargo_id']}?taken=1").text
-    assert "Reys biriktirildi" in html
-    assert "Qaytish yuki" in html and "Moskva → Toshkent" in html
+    assert "Рейс назначен" in html
+    assert "Обратный груз" in html and "Москва → Ташкент" in html
 
 
 def test_skip_htmx(client, app_env):
     m = best_match(app_env["cargo_id"])
     r = client.post(f"/match/{m['id']}/skip", headers={"HX-Request": "true"})
-    assert "O'tkazildi" in r.text
+    assert "Пропущено" in r.text
     assert db.get_match(m["id"])["decision"] == "skipped"
 
 
@@ -216,20 +216,20 @@ def test_actual_margin_rejects_text(client, app_env):
 
 def test_cargos_list(client):
     html = client.get("/cargos").text
-    assert "Toshkent → Moskva" in html
+    assert "Ташкент → Москва" in html
     assert "Есть груз Ташкент" in html            # asl matn
 
 
 def test_cargos_filter_canonical_city(client):
     """Filtrda "Казань" deb yozilsa ham kanonik nom bo'yicha qidiriladi."""
-    assert "Toshkent → Moskva" in client.get("/cargos?from=Ташкент").text
+    assert "Ташкент → Москва" in client.get("/cargos?from=Ташкент").text
     other = client.get("/cargos?from=Казань").text
-    assert "Toshkent → Moskva" not in other
-    assert "topilmadi" in other
+    assert "Ташкент → Москва" not in other
+    assert "Таких грузов нет" in other
 
 
 def test_cargos_unknown_city_note(client):
-    assert "topilmadi" in client.get("/cargos?from=Кукуево").text
+    assert "не найден" in client.get("/cargos?from=Кукуево").text
 
 
 def test_raw_text_is_escaped(client):
@@ -245,7 +245,7 @@ def test_raw_text_is_escaped(client):
 
 def test_cargo_detail(client, app_env):
     html = client.get(f"/cargo/{app_env['cargo_id']}").text
-    assert "Furalar bo'yicha hisob" in html
+    assert "Расчёт по фурам" in html
     assert "+998901234567" in html
 
 
@@ -305,7 +305,7 @@ def test_truck_bad_numbers(client):
 def test_map_payload(client):
     data = client.get("/api/map").json()
     assert {t["id"] for t in data["trucks"]} == {"01", "02"}
-    assert data["cargos"][0]["label"] == "Toshkent → Moskva"
+    assert data["cargos"][0]["label"] == "Ташкент → Москва"
 
 
 def test_map_page(client):
@@ -313,14 +313,14 @@ def test_map_page(client):
 
 
 def test_history_empty(client):
-    assert "Hali olingan reys" in client.get("/history").text
+    assert "Взятых рейсов пока нет" in client.get("/history").text
 
 
 # ---------------------------------------------------------------- sozlamalar
 
 def test_settings_page(client):
     html = client.get("/settings").text
-    assert "Dizel narxi" in html and "Bildirishnoma chegarasi" in html
+    assert "Цена дизеля" in html and "Порог уведомления" in html
 
 
 def test_settings_save(client):
@@ -346,24 +346,24 @@ def test_settings_reset(client):
 
 def test_search_page_empty(client):
     html = client.get("/search").text
-    assert "Qidirish" in html
+    assert "Найти" in html
 
 
 def test_search_finds_cargo(client):
     html = client.get("/search?q=Ташкент Москва").text
-    assert "Toshkent → Moskva" in html
+    assert "Ташкент → Москва" in html
     assert "№01" in html or "№02" in html          # park bo'yicha hisoblangan
     assert "4 000" in html and "/kun" not in html          # narx yashil, kunlik marja yo'q
 
 
 def test_search_nothing_found_offers_watch(client):
     html = client.get("/search?q=Бухара Казань").text
-    assert "mos yuk yo'q" in html
-    assert "xabar bering" in html
+    assert "подходящих грузов нет" in html
+    assert "Сообщить" in html
 
 
 def test_search_unknown_query(client):
-    assert "tushunarsiz" in client.get("/search?q=салом жигар").text
+    assert "непонятно" in client.get("/search?q=салом жигар").text
 
 
 def test_search_result_has_take_button(client, app_env):
@@ -380,7 +380,7 @@ def test_watch_create_and_delete(client):
     assert (watches[0]["from_city"], watches[0]["to_city"],
             watches[0]["body_type"]) == ("Buxoro", "Qozon", "ref")
 
-    assert "Buxoro → Qozon" in client.get("/search").text
+    assert "Бухара → Казань" in client.get("/search").text
     client.post(f"/watch/{watches[0]['id']}/delete")
     assert db.active_watches() == []
 
@@ -400,13 +400,13 @@ def test_watch_ignores_empty_query(client):
 
 def test_stats_page(client, app_env):
     html = client.get("/stats").text
-    assert "Statistika" in html
-    assert "Guruhlar" in html and "grp1" in html
-    assert "Yo'nalishlar" in html and "Toshkent → Moskva" in html
+    assert "Статистика" in html
+    assert "Группы" in html and "grp1" in html
+    assert "Направления" in html and "Ташкент → Москва" in html
 
 
 def test_stats_period(client):
-    assert "7 kun" in client.get("/stats?days=7").text
+    assert "7 дн." in client.get("/stats?days=7").text
 
 
 def test_stats_handles_absurd_period(client):
@@ -424,25 +424,25 @@ def test_stats_on_empty_db(clean_db, monkeypatch):
 
 def test_truck_page(client):
     html = client.get("/truck/01").text
-    assert "Mashina №01" in html
-    assert "Toshkent" in html
-    assert "Reyslar tarixi" in html
+    assert "Фура №01" in html
+    assert "Ташкент" in html
+    assert "История рейсов" in html
 
 
 def test_truck_page_shows_offers(client):
-    assert "Toshkent → Moskva" in client.get("/truck/01").text
+    assert "Ташкент → Москва" in client.get("/truck/01").text
 
 
 def test_truck_page_shows_gps_state(client, clean_db):
     clean_db.save_gps_position("01", 41.31, 69.28, source="telegram")
-    assert "oxirgi signal" in client.get("/truck/01").text
+    assert "последний сигнал" in client.get("/truck/01").text
 
 
 def test_truck_page_history(client, app_env):
     m = best_match(app_env["cargo_id"])
     client.post(f"/match/{m['id']}/take")
     html = client.get(f"/truck/{m['truck_id']}").text
-    assert "Toshkent → Moskva" in html
+    assert "Ташкент → Москва" in html
 
 
 def test_truck_page_404(client):
@@ -558,11 +558,11 @@ def test_chat_page_without_ai(client, monkeypatch):
     for key in ("MISTRAL_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY"):
         monkeypatch.delenv(key, raising=False)
     html = client.get("/chat").text
-    assert "AI ulanmagan" in html and 'id="composer"' in html
+    assert "AI не подключён" in html and 'id="composer"' in html
     # AI yo'q — oddiy qidiruvga tushadi
     r = client.post("/chat/send", data={"text": "Ташкент Москва"},
                     headers={"hx-request": "true"})
-    assert "Toshkent" in r.text
+    assert "Ташкент" in r.text
 
 
 def test_chat_send_with_ai_shows_offer_buttons(client, app_env, monkeypatch):
@@ -615,7 +615,7 @@ def test_add_truck(client, app_env, monkeypatch):
     calls = []
     real = pipeline.rematch_all
     monkeypatch.setattr(pipeline, "rematch_all", lambda: calls.append(1) or real())
-    assert "Yangi fura" in client.get("/trucks/new").text
+    assert "Новая фура" in client.get("/trucks/new").text
     r = client.post("/trucks/new", data=new_truck_form(), follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/truck/07?saved=1"
     t = db.get_truck("07")
@@ -629,7 +629,7 @@ def test_add_truck(client, app_env, monkeypatch):
 
 def test_add_truck_validation(client):
     r = client.post("/trucks/new", data=new_truck_form(id="01"))          # band raqam
-    assert r.status_code == 400 and "allaqachon bor" in r.text
+    assert r.status_code == 400 and "уже есть" in r.text
     r = client.post("/trucks/new", data=new_truck_form(current_city="Кукуево"))
     assert r.status_code == 400
     r = client.post("/trucks/new", data=new_truck_form(temp_min="10", temp_max="-5"))
@@ -672,10 +672,10 @@ def test_truck_on_trip_is_visible(client, app_env):
     m = best_match(app_env["cargo_id"])
     client.post(f"/match/{m['id']}/take")
     home = client.get("/").text
-    assert "Yo'lda" in home and "Reys tugadi" in home and "Bekor qilish" in home
-    assert "Keyingi yuk" in home                         # qaytish yuki bo'limi
+    assert "В пути" in home and "Рейс завершён" in home and "Отменить" in home
+    assert "Следующий груз" in home                         # qaytish yuki bo'limi
     trips = client.get("/history").text
-    assert "Yo'lda" in trips and f"/trip/{m['id']}/finish" in trips
+    assert "В пути" in trips and f"/trip/{m['id']}/finish" in trips
 
 
 def test_trip_undo_from_panel(client, app_env):
@@ -688,7 +688,7 @@ def test_trip_undo_from_panel(client, app_env):
     assert db.get_truck(m["truck_id"])["current_city"] == before["current_city"]
     assert db.active_trips() == []
     # yuk yana taklif sifatida ko'rinadi
-    assert "Toshkent → Moskva" in client.get("/").text
+    assert "Ташкент → Москва" in client.get("/").text
 
 
 def test_trip_finish_from_panel(client, app_env):
@@ -697,7 +697,7 @@ def test_trip_finish_from_panel(client, app_env):
     client.post(f"/trip/{m['id']}/finish")
     assert db.active_trips() == []
     html = client.get("/history").text
-    assert "Tugagan" in html and "haqiqiy $" in html      # marja kiritish maydoni
+    assert "Завершённые" in html and "факт $" in html      # marja kiritish maydoni
 
 
 def test_offers_ranked_by_margin_per_day(clean_db, truck_tent):
@@ -710,8 +710,8 @@ def test_offers_ranked_by_margin_per_day(clean_db, truck_tent):
     per_day = [web._details(r).get("margin_per_day") for r in ranked]
     assert per_day[0] is not None and per_day[-1] is None
     html = web._offer(ranked[-1])
-    assert "so'rang" in html and "narxi yozilmagan" in html
-    assert "ball" not in web._offer(ranked[0])
+    assert "просить" in html and "цена не указана" in html
+    assert "балл" not in web._offer(ranked[0])
 
 
 # ---------------------------------------------------------------- o'tkazish — joyida yangilash
@@ -748,7 +748,7 @@ def test_skip_elsewhere_keeps_simple_note(client, app_env):
     r = client.post(f"/match/{first['id']}/skip",
                     headers={"HX-Request": "true",
                              "HX-Current-URL": "http://testserver/search?q=x"})
-    assert "HX-Retarget" not in r.headers and "O'tkazildi" in r.text
+    assert "HX-Retarget" not in r.headers and "Пропущено" in r.text
 
 
 # ---------------------------------------------------------------- animatsiyali emoji
@@ -813,7 +813,7 @@ def test_chat_cards_replace_list_lines(client, app_env):
 def test_take_button_shows_truck(client, app_env):
     m = best_match(app_env["cargo_id"])
     html = client.get("/").text
-    assert f"Olaman · №{m['truck_id']}" in html
+    assert f"Беру · №{m['truck_id']}" in html
     assert f'hx-get="/match/{m["id"]}/alt"' in html
 
 
@@ -833,7 +833,7 @@ def test_take_other_truck_from_alternatives(client, app_env):
         pytest.skip("ikkinchi fura bu yukka mos emas")
     r = client.post(f"/match/{alt['id']}/take",
                     headers={"HX-Request": "true", "HX-Current-URL": "http://testserver/chat"})
-    assert f"Fura №{other}" in r.text
+    assert f"Фура №{other}" in r.text
     assert db.taken_truck_for_cargo(app_env["cargo_id"]) == other
 
 
@@ -842,12 +842,32 @@ def test_take_on_home_refreshes_fleet_with_toast(client, app_env):
     r = client.post(f"/match/{m['id']}/take",
                     headers={"HX-Request": "true", "HX-Current-URL": "http://testserver/"})
     assert r.headers["HX-Retarget"] == "#fleet"
-    assert "Yo'lda" in r.text and 'hx-swap-oob="true"' in r.text
-    assert f"Fura №{m['truck_id']} oldi" in r.text
+    assert "В пути" in r.text and 'hx-swap-oob="true"' in r.text
+    assert f"Фура №{m['truck_id']} взяла" in r.text
 
 
 def test_cargo_page_names_truck_after_take(client, app_env):
     m = best_match(app_env["cargo_id"])
     client.post(f"/match/{m['id']}/take")
     html = client.get(f"/cargo/{app_env['cargo_id']}?taken=1").text
-    assert f"Fura №{m['truck_id']} ga biriktirildi" in html
+    assert f"Назначен на фуру №{m['truck_id']}" in html
+
+
+# ---------------------------------------------------------------- panel ruscha
+
+def test_panel_is_russian(client, app_env):
+    html = client.get("/").text
+    assert '<html lang="ru">' in html
+    for tab in ("Сегодня", "Грузы", "Парк", "Ещё"):
+        assert tab in html
+    assert "Bugun" not in html and "Yuklar" not in html and "Olaman" not in html
+
+
+def test_truck_form_shows_russian_city(client, app_env):
+    """Formada ruscha nom; saqlanganda kanonikka qaytadi (test_truck_edit_* ga qarang)."""
+    assert 'value="Ташкент"' in client.get("/truck/01").text
+
+
+def test_plural():
+    assert [web.plural(n, "фура", "фуры", "фур") for n in (1, 2, 5, 11, 21, 22, 25)] == \
+        ["фура", "фуры", "фур", "фур", "фура", "фуры", "фур"]

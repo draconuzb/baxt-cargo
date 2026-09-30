@@ -41,7 +41,7 @@ def match_reason(truck_id: str) -> str | None:
     truck = db.get_truck(truck_id)
     free = truck["free_date"] if truck is not None else None
     return (f"🔁 Обратный груз для №{truck_id}: свободна {free or '—'} "
-            f"в {trip['to_city']}")
+            f"в г. {trip['to_city']}")
 
 
 def _reminded_key(match_id: int) -> str:

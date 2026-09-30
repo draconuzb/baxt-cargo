@@ -137,7 +137,28 @@ def _dispatcher_chats() -> list[str]:
         return []
 
 
+def localize(text: str) -> str:
+    """Telegram matni ruscha: kanonik shahar nomi ("Toshkent") -> "Ташкент".
+
+    Bazada kanonik nom qoladi (2-qoida) — bu faqat chiqishda. Barcha
+    yuborish yo'llari (`_send_to`, `bot.api`) shundan o'tadi, shuning uchun
+    matn yig'ayotgan joy nomni o'girishni unutsa ham xabar ruscha chiqadi.
+    """
+    import geo
+    return geo.ru_text(text) if isinstance(text, str) else text
+
+
+def localize_markup(markup):
+    """Inline tugmalar matni ham ruscha; `callback_data` o'zgarmaydi."""
+    if not isinstance(markup, dict) or "inline_keyboard" not in markup:
+        return markup
+    return {**markup, "inline_keyboard": [
+        [{**b, "text": localize(b.get("text", ""))} for b in row]
+        for row in markup["inline_keyboard"]]}
+
+
 def _send_to(chat: str, text: str, reply_markup, token: str) -> dict | None:
+    text, reply_markup = localize(text), localize_markup(reply_markup)
     payload = {"chat_id": chat, "text": text, "parse_mode": "HTML",
                "disable_web_page_preview": True}
     if reply_markup:
@@ -158,7 +179,7 @@ def send(text: str, reply_markup: dict | None = None, chat_id: str | None = None
     chats = [chat_id] if chat_id else _dispatcher_chats()
     if not token or not chats:
         log.warning("BOT_TOKEN yoki dispetcher chati sozlanmagan — xabar yuborilmadi")
-        print("\n--- TELEGRAM XABARI (demo) ---\n" + text + "\n")
+        print("\n--- TELEGRAM XABARI (demo) ---\n" + localize(text) + "\n")
         return None
     result = None
     for chat in chats:
@@ -369,7 +390,7 @@ def driver_hint(truck: dict) -> str:
                 f"бота и отправит: <code>/link {escape(truck.get('id'))} "
                 f"{escape(truck.get('plate'))}</code>. Тогда рейсы будут приходить ему сами.")
     return (f"ℹ️ Водитель №{escape(truck.get('id'))} не подключён к боту. Сначала впишите "
-            f"госномер машины в панели (Park → №{escape(truck.get('id'))} → Tahrirlash).")
+            f"госномер машины в панели (Парк → №{escape(truck.get('id'))} → Редактирование).")
 
 
 def format_search(found: dict) -> str:
@@ -505,9 +526,9 @@ def format_price(adv: dict) -> str:
 def format_roundtrip(cargo: dict, chains: list[dict]) -> str:
     """Qaytish yuki takliflari — mashina bo'sh qaytmasin."""
     if not chains:
-        return (f"🔁 Обратный груз из {cargo.get('to_city')} пока не найден.\n"
+        return (f"🔁 Обратный груз из г. {cargo.get('to_city')} пока не найден.\n"
                 f"Проверю снова, когда появятся новые объявления.")
-    lines = [f"🔁 <b>Обратный груз из {cargo.get('to_city')}</b> "
+    lines = [f"🔁 <b>Обратный груз из г. {cargo.get('to_city')}</b> "
              f"(оценка по текущим объявлениям):"]
     for i, ch in enumerate(chains, 1):
         b = ch["back_cargo"]

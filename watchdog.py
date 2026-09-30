@@ -52,7 +52,7 @@ def check_services() -> dict[str, str]:
     for name in SERVICES:
         code, out = _run(["systemctl", "is-active", name])
         if out != "active":
-            problems[f"service:{name}"] = f"{name} ishlamayapti ({out or code})"
+            problems[f"service:{name}"] = f"{name} не работает ({out or code})"
     return problems
 
 
@@ -62,9 +62,9 @@ def check_web() -> dict[str, str]:
         with urllib.request.urlopen(f"http://127.0.0.1:{port}/health", timeout=10) as r:
             if r.status == 200:
                 return {}
-            return {"web": f"Panel javobi: HTTP {r.status}"}
+            return {"web": f"Панель отвечает: HTTP {r.status}"}
     except Exception as ex:
-        return {"web": f"Panel javob bermayapti: {type(ex).__name__}"}
+        return {"web": f"Панель не отвечает: {type(ex).__name__}"}
 
 
 def check_fresh_cargo(now_local: datetime | None = None) -> dict[str, str]:
@@ -81,8 +81,8 @@ def check_fresh_cargo(now_local: datetime | None = None) -> dict[str, str]:
     last = datetime.fromisoformat(row["last"][:19])
     hours = (db.utc_now() - last).total_seconds() / 3600
     if hours >= QUIET_HOURS_LIMIT:
-        return {"fresh": f"{hours:.0f} soatdan beri yangi yuk yo'q — listener uzilgan "
-                         f"bo'lishi mumkin"}
+        return {"fresh": f"Новых грузов нет уже {hours:.0f} ч — возможно, listener "
+                         f"отключился"}
     return {}
 
 
@@ -90,7 +90,7 @@ def check_disk(path: str | None = None) -> dict[str, str]:
     usage = shutil.disk_usage(path or str(config.BASE_DIR))
     pct = usage.used * 100 // usage.total
     if pct >= DISK_LIMIT_PCT:
-        return {"disk": f"Disk {pct}% to'lgan (bo'sh {usage.free // 2**30} GB)"}
+        return {"disk": f"Диск заполнен на {pct}% (свободно {usage.free // 2**30} ГБ)"}
     return {}
 
 
@@ -101,7 +101,7 @@ def check_code() -> dict[str, str]:
     if code != 0 or not out:
         return {}
     files = ", ".join(line[3:] for line in out.splitlines()[:5])
-    return {"code": f"Serverdagi kod qo'lda o'zgartirilgan: {files}"}
+    return {"code": f"Код на сервере изменён вручную: {files}"}
 
 
 CHECKS = (check_services, check_web, check_fresh_cargo, check_disk, check_code)
@@ -125,16 +125,16 @@ def run(checks=CHECKS, send=None) -> dict[str, str]:
             problems.update(check())
         except Exception as ex:
             log.exception("Tekshiruv xatosi: %s", check.__name__)
-            problems[f"check:{check.__name__}"] = f"{check.__name__} ishlamadi: {ex}"
+            problems[f"check:{check.__name__}"] = f"{check.__name__} не сработал: {ex}"
 
     before = _load_state()
     new = {k: v for k, v in problems.items() if k not in before}
     fixed = [k for k in before if k not in problems]
     if new:
-        send("🚨 <b>Nazoratchi: muammo</b>\n"
+        send("🚨 <b>Контроль: проблема</b>\n"
              + "\n".join(f"• {notifier.escape(v)}" for v in new.values()))
     if fixed:
-        send("✅ <b>Nazoratchi: tuzaldi</b>\n"
+        send("✅ <b>Контроль: исправлено</b>\n"
              + "\n".join(f"• {notifier.escape(before[k])}" for k in fixed))
     if new or fixed:
         db.set_setting(STATE_KEY, json.dumps(problems, ensure_ascii=False))

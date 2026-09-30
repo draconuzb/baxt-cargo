@@ -69,7 +69,7 @@ def test_block_rule_hides_cargo(base, truck_tent, costs):
     rules.add("block", {"to_country": "RU"})
     res = scoring.evaluate(cargo(), truck_tent, costs)
     assert not res["ok"]
-    assert any("qoida #" in r for r in res["reasons"])
+    assert any("правило #" in r for r in res["reasons"])
 
 
 def test_min_price_rule_from_russia(base, truck_tent, costs):
@@ -86,7 +86,7 @@ def test_min_price_rule_from_russia(base, truck_tent, costs):
     assert not scoring.evaluate(cheap, truck_tent, costs)["ok"]
     assert scoring.evaluate(rich, truck_tent, costs)["ok"]
     # qoida faqat Rossiyadan yuklarga tegishli
-    assert "qoida" not in str(scoring.evaluate(other, truck_tent, costs)["reasons"])
+    assert "правило" not in str(scoring.evaluate(other, truck_tent, costs)["reasons"])
 
 
 def test_unknown_price_is_not_blocked(base, truck_tent, costs):

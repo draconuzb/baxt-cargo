@@ -53,6 +53,11 @@ def api(method: str, http_timeout: int = 15, **params) -> dict:
     """
     if not config.BOT_TOKEN:
         raise SystemExit("BOT_TOKEN sozlanmagan — .env ga yozing")
+    # Chiqish ruscha: shahar nomlari "Ташкент" (notifier.localize)
+    if "text" in params:
+        params["text"] = notifier.localize(params["text"])
+    if "reply_markup" in params:
+        params["reply_markup"] = notifier.localize_markup(params["reply_markup"])
     url = f"https://api.telegram.org/bot{config.BOT_TOKEN}/{method}"
     data = json.dumps(params).encode()
     req = urllib.request.Request(
@@ -106,14 +111,18 @@ def allowed(chat_id) -> bool:
 
 # Doimiy tugmalar — dispetcher komanda yodlamasin, bossin. Tugma matni
 # oddiy xabar bo'lib keladi, shuning uchun `MENU` orqali yo'naltiramiz.
-KB_SEARCH = "🔍 Qidiruv"
-KB_LIST = "📋 Ro'yxat"
-KB_FLEET = "🚛 Park"
-KB_STATS = "📊 Statistika"
-KB_WATCH = "🔔 Kuzatuvlar"
-KB_HELP = "❓ Yordam"
-KB_PLAN = "🧠 Reja"
-KB_RULES = "📜 Qoidalar"
+KB_SEARCH = "🔍 Поиск"
+KB_LIST = "📋 Список"
+KB_FLEET = "🚛 Парк"
+KB_STATS = "📊 Статистика"
+KB_WATCH = "🔔 Отслеживание"
+KB_HELP = "❓ Помощь"
+KB_PLAN = "🧠 План"
+KB_RULES = "📜 Правила"
+# Eski (o'zbekcha) tugmalar — telefonda klaviatura yangilanguncha ular ham ishlasin
+KB_LEGACY = {"🔍 Qidiruv": KB_SEARCH, "📋 Ro'yxat": KB_LIST, "🚛 Park": KB_FLEET,
+             "📊 Statistika": KB_STATS, "🔔 Kuzatuvlar": KB_WATCH, "❓ Yordam": KB_HELP,
+             "🧠 Reja": KB_PLAN, "📜 Qoidalar": KB_RULES}
 
 
 def main_keyboard() -> dict:
@@ -769,8 +778,8 @@ def cmd_brief(chat_id, args: list[str]) -> None:
     text, keyboard = briefing.build()
     hour = settings.briefing_hour()
     when = (f"\n\n<i>Каждый день в {hour:02d}:00 (Ташкент). Время меняется в панели: "
-            f"Ko'proq → Sozlamalar.</i>" if hour >= 0 else
-            "\n\n<i>Утренняя сводка выключена (панель: Ko'proq → Sozlamalar).</i>")
+            f"Ещё → Настройки.</i>" if hour >= 0 else
+            "\n\n<i>Утренняя сводка выключена (панель: Ещё → Настройки).</i>")
     send(chat_id, text + when, keyboard)
 
 
@@ -962,6 +971,7 @@ def handle_message(msg: dict) -> None:
         return
 
     # Pastdagi doimiy tugmalar — matn bo'lib keladi, buyruqqa yo'naltiramiz.
+    text = KB_LEGACY.get(text, text)
     menu = {
         KB_LIST: cmd_list, KB_FLEET: cmd_fleet, KB_STATS: cmd_stats,
         KB_WATCH: cmd_watches, KB_HELP: cmd_help,

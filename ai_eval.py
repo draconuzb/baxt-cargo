@@ -34,45 +34,45 @@ log = logging.getLogger("ai_eval")
 @dataclass
 class Case:
     q: str
-    script: str                    # latn | cyrl
     tools: set[str]                # qabul qilinadigan asboblar; bo'sh — asbobsiz javob ham to'g'ri
     no_tool_ok: bool = False
 
 
 # Tartib muhim: bazani o'zgartiradigan savollar (qoida, joy, xotira) oxirida.
 CASES: list[Case] = [
-    Case("Nechta furamiz bor va qayerda turibdi?", "latn", {"fleet"}, no_tool_ok=True),
-    Case("01 uchun eng foydali yuk qaysi?", "latn", {"find_cargo", "plan_truck"}),
-    Case("01 учун энг фойдали юк қайси?", "cyrl", {"find_cargo", "plan_truck"}),
-    Case("Какой самый выгодный груз для машины 01?", "cyrl", {"find_cargo", "plan_truck"}),
-    Case("02 Qozonda turibdi, atrofidan yaxshi yuk top", "latn",
+    Case("Nechta furamiz bor va qayerda turibdi?", {"fleet"}, no_tool_ok=True),
+    Case("01 uchun eng foydali yuk qaysi?", {"find_cargo", "plan_truck"}),
+    Case("01 учун энг фойдали юк қайси?", {"find_cargo", "plan_truck"}),
+    Case("Какой самый выгодный груз для машины 01?", {"find_cargo", "plan_truck"}),
+    Case("02 Qozonda turibdi, atrofidan yaxshi yuk top",
          {"find_cargo", "plan_truck"}),
-    Case("Har furaga yuk va qaytish yukini rejalab ber", "latn", {"plan_fleet", "plan_truck"}),
-    Case("Составь план на все машины: груз и обратный груз", "cyrl",
+    Case("Har furaga yuk va qaytish yukini rejalab ber", {"plan_fleet", "plan_truck"}),
+    Case("Составь план на все машины: груз и обратный груз",
          {"plan_fleet", "plan_truck"}),
-    Case("Ҳар бир фурага юк топ, қайтиш юкини ҳам", "cyrl", {"plan_fleet", "plan_truck"}),
-    Case("Toshkent Moskva yuk bormi?", "latn", {"find_cargo"}),
-    Case("Есть грузы из Москвы в Ташкент?", "cyrl", {"find_cargo"}),
-    Case("toshkentdan maskvaga ref yuk bormi", "latn", {"find_cargo"}),
-    Case("Qanday qoidalarimiz bor?", "latn", {"list_rules"}, no_tool_ok=True),
-    Case("4-yukka qancha so'rash kerak?", "latn", {"price_advice"}),
-    Case("Сколько просить за груз #2?", "cyrl", {"price_advice"}),
-    Case("Тошкент Москва 20 тонна тентга қанча нарх сўрайлик?", "cyrl", {"price_advice"}),
-    Case("Toshkent Almaty yo'nalishida bozor narxi qancha?", "latn",
+    Case("Ҳар бир фурага юк топ, қайтиш юкини ҳам", {"plan_fleet", "plan_truck"}),
+    Case("Toshkent Moskva yuk bormi?", {"find_cargo"}),
+    Case("Есть грузы из Москвы в Ташкент?", {"find_cargo"}),
+    Case("toshkentdan maskvaga ref yuk bormi", {"find_cargo"}),
+    Case("Qanday qoidalarimiz bor?", {"list_rules"}, no_tool_ok=True),
+    Case("4-yukka qancha so'rash kerak?", {"price_advice"}),
+    Case("Сколько просить за груз #2?", {"price_advice"}),
+    Case("Тошкент Москва 20 тонна тентга қанча нарх сўрайлик?", {"price_advice"}),
+    Case("Toshkent Almaty yo'nalishida bozor narxi qancha?",
          {"market", "price_advice"}),
-    Case("Oxirgi 7 kunda nechta yuk keldi va nechtasi olindi?", "latn", {"stats"}),
-    Case("#3 yukning to'liq e'lon matnini ko'rsat", "latn", {"cargo_info"}),
-    Case("salom", "latn", set(), no_tool_ok=True),
-    Case("Toshkent Novosibirsk yuk chiqsa xabar ber", "latn", {"watch_route"}),
-    Case("Rossiyadan 30 mln dan arzon yuk olmagin", "latn", {"add_rule"}),
-    Case("Не бери грузы в Казахстан", "cyrl", {"add_rule"}),
-    Case("Esda tut: 02 haydovchisi Sardor, u Qozog'istonga bormaydi", "latn",
+    Case("Oxirgi 7 kunda nechta yuk keldi va nechtasi olindi?", {"stats"}),
+    Case("#3 yukning to'liq e'lon matnini ko'rsat", {"cargo_info"}),
+    Case("salom", set(), no_tool_ok=True),
+    Case("Toshkent Novosibirsk yuk chiqsa xabar ber", {"watch_route"}),
+    Case("Rossiyadan 30 mln dan arzon yuk olmagin", {"add_rule"}),
+    Case("Не бери грузы в Казахстан", {"add_rule"}),
+    Case("Esda tut: 02 haydovchisi Sardor, u Qozog'istonga bormaydi",
          {"remember", "add_rule"}),
-    Case("01 fura endi Samarqandda", "latn", {"set_truck_position"}),
+    Case("01 fura endi Samarqandda", {"set_truck_position"}),
 ]
 
 _LATN = re.compile(r"[A-Za-zʻʼ'‘’]")
 _CYRL = re.compile(r"[А-Яа-яЁёЎўҚқҒғҲҳ]")
+_UZ_LETTERS = re.compile(r"[ЎўҚқҒғҲҳ]")
 _BAD = re.compile(r"&lt;/?[a-z]+|\b(find_cargo|plan_truck|plan_fleet|price_advice|"
                   r"set_truck_position|add_rule|list_rules|watch_route|cargo_info|"
                   r"margin_per_day|tool_call)\b|\{\"")
@@ -82,9 +82,12 @@ _NUM = re.compile(r"\d(?:(?:[^\S\n]|,)?\d)*")
 
 
 def _script(text: str) -> str:
+    """Javob tili: "ru" (kerakli), "uz" (o'zbek kirill) yoki "latn"."""
     plain = re.sub(r"<[^>]+>", "", text)
     lat, cyr = len(_LATN.findall(plain)), len(_CYRL.findall(plain))
-    return "cyrl" if cyr > lat else "latn"
+    if cyr <= lat:
+        return "latn"
+    return "uz" if _UZ_LETTERS.search(plain) else "ru"
 
 
 def _numbers(text: str, minimum: int = 100) -> set[int]:
@@ -160,7 +163,7 @@ def run(models: list[dict], cases: list[Case], pause: float = 8.0,
             if res is not None:
                 used = set(res.tools_used)
                 row["tool"] = bool(used & case.tools) or (case.no_tool_ok and not used)
-                row["lang"] = _script(res.raw) == case.script
+                row["lang"] = _script(res.raw) == "ru"          # javob doim ruscha
                 row["clean"] = not _BAD.search(res.text)
                 corpus = " ".join(res.tool_outputs) + " " + brain._context() + " " + case.q
                 row["grounded"], row["missing"] = _grounded(res.raw, corpus)

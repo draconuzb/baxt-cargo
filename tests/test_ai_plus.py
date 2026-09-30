@@ -58,7 +58,8 @@ def test_price_advice_for_cargo(fleet):
     assert adv["ask_usd"] % ai_tools.PRICE_STEP == 0
     assert adv["market"]["ads_30d"] >= 1          # shu yo'nalishdagi boshqa e'lon
     assert adv["offered_usd"] == 4000
-    assert "Toshkent → Moskva" in adv["message"] and f"${adv['ask_usd']}" in adv["message"]
+    # yuk egasiga matn ruscha — shahar nomlari ham
+    assert "Ташкент → Москва" in adv["message"] and f"${adv['ask_usd']}" in adv["message"]
 
 
 def test_price_ask_not_below_target_even_if_market_low(fleet, costs):
@@ -191,7 +192,8 @@ def test_voice_ignored_in_group(fleet, tg, monkeypatch):
 def test_eval_helpers():
     import ai_eval
     assert ai_eval._script("Toshkent → Moskva, $459/kun") == "latn"
-    assert ai_eval._script("Лучший груз: Toshkent → Moskva, маржа $459") == "cyrl"
+    assert ai_eval._script("Лучший груз: Ташкент → Москва, маржа $459") == "ru"
+    assert ai_eval._script("Энг яхши юк: Тошкент → Москва, қайтиш юки ҳам бор") == "uz"
     ok, missing = ai_eval._grounded("Marja $1 251, kuniga $459", '{"m":1251.4,"d":459}')
     assert ok and missing == []
     ok, missing = ai_eval._grounded("Marja $9 999", '{"m":1251}')
@@ -209,9 +211,9 @@ def test_eval_run_on_copy(fleet, monkeypatch):
         {"role": "assistant", "content": "", "tool_calls": [{"id": "call00001",
          "type": "function", "function": {"name": "add_rule", "arguments": _json.dumps(
              {"effect": "block", "scope": {"to_country": "KZ"}})}}]},
-        {"role": "assistant", "content": "Tushundim, Qozog'istonga yuk olmaymiz."}])
+        {"role": "assistant", "content": "Понял, грузы в Казахстан не берём."}])
     monkeypatch.setattr(brain, "chat_completion", lambda p, m, tools=True: next(steps))
-    cases = [ai_eval.Case("Qozog'istonga yuk olma", "latn", {"add_rule"})]
+    cases = [ai_eval.Case("Qozog'istonga yuk olma", {"add_rule"})]
     scores = ai_eval.run([{"name": "fake", "model": "m", "base_url": "", "key": "k"}],
                          cases, pause=0)
     s = scores[0].summary()

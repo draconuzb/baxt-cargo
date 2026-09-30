@@ -132,4 +132,4 @@ def test_settings_page_shows_briefing_hour(clean_db, monkeypatch):
     web._login_fails.clear()
     c = TestClient(web.create_app())
     c.post("/login", data={"password": "p"})
-    assert "Ertalabki reja soati" in c.get("/settings").text
+    assert "Час утреннего плана" in c.get("/settings").text

@@ -16,10 +16,10 @@ def test_alerts_once_then_recovery(clean_db):
 
     watchdog.run(checks=(broken,), send=sent.append)
     watchdog.run(checks=(broken,), send=sent.append)      # takror — jim
-    assert len(sent) == 1 and "muammo" in sent[0] and "listener" in sent[0]
+    assert len(sent) == 1 and "проблема" in sent[0] and "listener" in sent[0]
 
     watchdog.run(checks=(ok,), send=sent.append)
-    assert len(sent) == 2 and "tuzaldi" in sent[1]
+    assert len(sent) == 2 and "исправлено" in sent[1]
     watchdog.run(checks=(ok,), send=sent.append)          # hammasi joyida — jim
     assert len(sent) == 2
 

@@ -322,7 +322,7 @@ def apply(c: dict, t: dict, res: dict,
         if rule["require"]:
             if not _violations(rule["require"], values):
                 continue          # shart bajarilgan — qoida ta'sir qilmaydi
-        label = f"qoida #{rule['id']}: {describe(rule)}"
+        label = f"правило #{rule['id']}: {describe(rule)}"
         if rule["effect"] == "block":
             fails.append(label)
         elif rule["effect"] == "penalty":
@@ -350,8 +350,10 @@ _REQ_TEXT = {
 def scope_text(s: dict) -> str:
     """Qoida qaysi yuklarga tegishli — ruscha qisqa matn."""
     where = []
-    src = s.get("from_city") or _COUNTRY_NAME.get(s.get("from_country", ""), s.get("from_country"))
-    dst = s.get("to_city") or _COUNTRY_NAME.get(s.get("to_country", ""), s.get("to_country"))
+    src = geo.ru(s.get("from_city")) or _COUNTRY_NAME.get(s.get("from_country", ""),
+                                                           s.get("from_country"))
+    dst = geo.ru(s.get("to_city")) or _COUNTRY_NAME.get(s.get("to_country", ""),
+                                                         s.get("to_country"))
     if src and dst:
         where.append(f"{src} → {dst}")
     elif src:

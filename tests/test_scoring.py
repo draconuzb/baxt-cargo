@@ -89,7 +89,7 @@ def test_empty_run_lowers_score(truck_tent, costs):
 def test_overweight_rejected(truck_tent, costs):
     r = scoring.evaluate(cargo(weight_t=25.0), truck_tent, costs)
     assert r["ok"] is False
-    assert any("sig'im" in x for x in r["reasons"])
+    assert any("грузоподъёмность" in x for x in r["reasons"])
 
 
 def test_weight_tolerance_allows_half_ton(truck_tent, costs):
@@ -100,7 +100,7 @@ def test_weight_tolerance_allows_half_ton(truck_tent, costs):
 def test_ref_cargo_rejected_for_tent_truck(truck_tent, costs):
     r = scoring.evaluate(cargo(body_type="ref", temp_c=-18.0), truck_tent, costs)
     assert r["ok"] is False
-    assert any("refrijerator" in x for x in r["reasons"])
+    assert any("рефрижератор" in x for x in r["reasons"])
 
 
 def test_tent_cargo_allowed_on_ref_truck(truck_ref, costs):
@@ -114,20 +114,20 @@ def test_temp_below_truck_range(truck_ref, costs):
     r = scoring.evaluate(cargo(body_type="ref", temp_c=-25.0, weight_t=19.0),
                          truck_ref, costs)
     assert r["ok"] is False
-    assert any("past" in x for x in r["reasons"])
+    assert any("ниже" in x for x in r["reasons"])
 
 
 def test_temp_above_truck_range(truck_ref, costs):
     r = scoring.evaluate(cargo(body_type="ref", temp_c=20.0, weight_t=19.0),
                          truck_ref, costs)
     assert r["ok"] is False
-    assert any("yuqori" in x for x in r["reasons"])
+    assert any("выше" in x for x in r["reasons"])
 
 
 def test_special_body_must_match(truck_tent, costs):
     r = scoring.evaluate(cargo(body_type="tral", weight_t=20.0), truck_tent, costs)
     assert r["ok"] is False
-    assert any("kuzov" in x for x in r["reasons"])
+    assert any("кузова" in x for x in r["reasons"])
 
 
 def test_empty_run_limit(truck_tent, costs):
@@ -136,20 +136,20 @@ def test_empty_run_limit(truck_tent, costs):
     assert geo.road_km("Toshkent", "Almaty") > costs.max_empty_km
     r = scoring.evaluate(far, truck_tent, costs)
     assert r["ok"] is False
-    assert any("bo'sh probeg" in x for x in r["reasons"])
+    assert any("пустой пробег" in x for x in r["reasons"])
 
 
 def test_truck_cannot_arrive_in_time(truck_tent, costs):
     """Mashina 20-sentabrda bo'shaydi, yuk 21-avgustda yuklanadi — ulgurmaydi."""
     r = scoring.evaluate(cargo(load_date="2026-08-21"), truck_tent, costs)
     assert r["ok"] is False
-    assert any("ulgurmaydi" in x for x in r["reasons"])
+    assert any("не успевает" in x for x in r["reasons"])
 
 
 def test_unknown_city_is_not_a_crash(truck_tent, costs):
     r = scoring.evaluate(cargo(to_city="Qandaydir Shahar"), truck_tent, costs)
     assert r["ok"] is False
-    assert "shahar koordinatasi topilmadi" in r["reasons"]
+    assert "нет координат города" in r["reasons"]
 
 
 # ---------------------------------------------------------------- xarajat hisobi
@@ -203,7 +203,7 @@ def test_no_rate_scores_without_margin(truck_tent, costs):
     assert "marja" not in r["score_parts"]
     assert "stavka" not in r["score_parts"]
     assert 0 < r["score"] <= 100
-    assert any("stavka" in w for w in r["warnings"])
+    assert any("ставка" in w for w in r["warnings"])
 
 
 def test_score_within_bounds(truck_tent, costs):

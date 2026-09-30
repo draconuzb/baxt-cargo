@@ -68,13 +68,13 @@ LOGIN_WINDOW_SEC = 600
 PUBLIC_PATHS = {"/login", "/health", "/enter", "/tg-auth"}
 TG_AUTH_MAX_AGE = 24 * 3600
 
-BODY = {"ref": "Ref", "tent": "Tent", "izoterm": "Izoterm", "bort": "Bort",
-        "konteyner": "Konteyner", "tral": "Tral", "samosval": "Samosval"}
-STATUS = {"new": "yangi", "taken": "olingan", "skipped": "o'tkazilgan",
-          "expired": "eskirgan"}
-DECISION = {"taken": "olindi ✓", "skipped": "o'tkazildi",
-            "cancelled": "— bekor", None: ""}
-POS_SOURCE = {"gps": "GPS", "manual": "qo'lda", "trip": "reysdan keyin"}
+BODY = {"ref": "Реф", "tent": "Тент", "izoterm": "Изотерм", "bort": "Борт",
+        "konteyner": "Контейнер", "tral": "Трал", "samosval": "Самосвал"}
+STATUS = {"new": "новый", "taken": "взят", "skipped": "пропущен",
+          "expired": "устарел"}
+DECISION = {"taken": "взят ✓", "skipped": "пропущен",
+            "cancelled": "— отменён", "undone": "— отменён", None: ""}
+POS_SOURCE = {"gps": "GPS", "manual": "вручную", "trip": "после рейса"}
 DIRECTIONS = ["", "UZ", "RU", "KZ", "KG", "TJ", "TM", "BY", "TR", "CN"]
 
 
@@ -87,6 +87,24 @@ def e(v) -> str:
 
 def money(v) -> str:
     return notifier.money(v)
+
+
+def ru(city) -> str:
+    """Shahar nomi ruscha va HTML uchun xavfsiz ("Toshkent" -> "Ташкент").
+
+    Panel ruscha; bazada kanonik nom qoladi (2-qoida) — bu faqat ko'rinish.
+    """
+    return e(geo.ru(city))
+
+
+def plural(n, one: str, few: str, many: str) -> str:
+    """Ruscha son bilan kelishik: 1 фура, 2 фуры, 5 фур."""
+    n = abs(int(n or 0))
+    if n % 10 == 1 and n % 100 != 11:
+        return one
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+        return few
+    return many
 
 
 def _details(row) -> dict:
@@ -104,9 +122,9 @@ def _score_class(score) -> str:
 
 def _rate_text(row) -> str:
     if not row["rate"] or not row["currency"]:
-        return '<span class="muted">stavka yo\'q</span>'
+        return '<span class="muted">нет ставки</span>'
     if row["currency"] == "UZS":
-        text = f"{row['rate'] / 1_000_000:.1f} mln so'm"
+        text = f"{row['rate'] / 1_000_000:.1f} млн сум"
     else:
         text = f"{row['rate']:,.0f} {row['currency']}".replace(",", " ")
     if row["currency"] != "USD" and row["rate_usd"]:
@@ -117,7 +135,7 @@ def _rate_text(row) -> str:
 def _cargo_line(row) -> str:
     parts = []
     if row["weight_t"]:
-        parts.append(f"{row['weight_t']:g} t")
+        parts.append(f"{row['weight_t']:g} т")
     if row["body_type"]:
         parts.append(BODY.get(row["body_type"], row["body_type"]))
     if row["temp_c"] is not None:
@@ -126,7 +144,7 @@ def _cargo_line(row) -> str:
 
 
 def ago_text(timestamp) -> str:
-    """"12 daq" — e'lon qachon kelgani. Baza UTC da yozadi."""
+    """"12 мин" — e'lon qachon kelgani. Baza UTC da yozadi."""
     if not timestamp:
         return ""
     try:
@@ -135,20 +153,20 @@ def ago_text(timestamp) -> str:
         return str(timestamp)[5:16]
     seconds = (db.utc_now() - when).total_seconds()
     if seconds < 90:
-        return "hozir"
+        return "сейчас"
     if seconds < 3600:
-        return f"{int(seconds // 60)} daq"
+        return f"{int(seconds // 60)} мин"
     if seconds < 86400:
-        return f"{int(seconds // 3600)} soat"
-    return f"{int(seconds // 86400)} kun"
+        return f"{int(seconds // 3600)} ч"
+    return f"{int(seconds // 86400)} дн."
 
 
 def ago_phrase(timestamp) -> str:
-    """"5 daq oldin" / "hozirgina"."""
+    """"5 мин назад" / "только что"."""
     text = ago_text(timestamp)
     if not text:
         return ""
-    return "hozirgina" if text == "hozir" else f"{text} oldin"
+    return "только что" if text == "сейчас" else f"{text} назад"
 
 
 def _status_pill(status: str) -> str:
@@ -864,11 +882,11 @@ def ic(name: str, size: int = 18, cls: str = "") -> str:
 
 # Pastki menyu — 5 ta bo'lim (iOS tab-bar). Qolgan sahifalar shularning ichida:
 # Yuklar = ro'yxat + qidiruv + xarita, Ko'proq = statistika, tarix, qoidalar...
-TABS = [("/", "Bugun", "home"), ("/cargos", "Yuklar", "box"), ("/chat", "AI", "spark"),
-        ("/trucks", "Park", "truck"), ("/more", "Ko'proq", "more")]
-MORE = [("/stats", "Statistika", "chart", "#0a84ff"),
-        ("/rules", "Qoidalar", "rules", "#af52de"), ("/watches", "Kuzatuvlar", "bell", "#ff3b30"),
-        ("/settings", "Sozlamalar", "settings", "#8e8e93")]
+TABS = [("/", "Сегодня", "home"), ("/cargos", "Грузы", "box"), ("/chat", "AI", "spark"),
+        ("/trucks", "Парк", "truck"), ("/more", "Ещё", "more")]
+MORE = [("/stats", "Статистика", "chart", "#0a84ff"),
+        ("/rules", "Правила", "rules", "#af52de"), ("/watches", "Отслеживание", "bell", "#ff3b30"),
+        ("/settings", "Настройки", "settings", "#8e8e93")]
 _SECTION = {"/search": "/cargos", "/map": "/cargos", "/cargo": "/cargos", "/truck": "/trucks",
             "/stats": "/more", "/history": "/trucks", "/rules": "/more", "/watches": "/more",
             "/settings": "/more"}
@@ -916,19 +934,19 @@ def page(title: str, body: str, active: str = "", head: str = "",
     section = _section(active)
     side_links = "".join(
         f'<a href="{href}" class="{"on" if href == section else ""}">'
-        f'{ic(icon)}<span>{"AI yordamchi" if href == "/chat" else label}</span></a>'
+        f'{ic(icon)}<span>{"AI-помощник" if href == "/chat" else label}</span></a>'
         for href, label, icon in TABS if href != "/more")
     side_more = "".join(
         f'<a href="{href}" class="{"on" if href == active else ""}">{ic(icon)}<span>{label}</span></a>'
         for href, label, icon, _ in MORE)
     menu = (f'<aside class="side">'
             f'<div class="brand">{anim("truck", 28)}<span>BAXT</span></div>{side_links}'
-            f'<div class="grp">Ko\'proq</div>{side_more}'
+            f'<div class="grp">Ещё</div>{side_more}'
             f'<div class="foot">'
             f'<button class="btn ghost" onclick="baxtTheme()" '
-            f'title="Yorug\'/qorong\'i rejim">{ic("theme")}</button>'
+            f'title="Светлая/тёмная тема">{ic("theme")}</button>'
             f'<form method="post" action="/logout">'
-            f'<button class="btn ghost" title="Chiqish">{ic("logout")}</button></form>'
+            f'<button class="btn ghost" title="Выйти">{ic("logout")}</button></form>'
             f'</div></aside>') if nav else ""
     # Mobil: 5 ta tab, AI o'rtada katta tugma
     tabs = []
@@ -942,7 +960,7 @@ def page(title: str, body: str, active: str = "", head: str = "",
                         f'<span>{label}</span></a>')
     tabbar = f'<nav class="tabbar">{"".join(tabs)}</nav>' if nav else ""
     layout = "" if nav else "<style>body{grid-template-columns:1fr}</style>"
-    html = f"""<!doctype html><html lang="uz"><head><meta charset="utf-8">
+    html = f"""<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
@@ -965,7 +983,7 @@ def top(title: str, subtitle: str = "", back: tuple[str, str] | None = None,
     return f'{back_html}<div class="top"><div><h1>{title}</h1>{sub}</div>{right_html}</div>'
 
 
-BACK_MORE = ("/more", "Ko'proq")
+BACK_MORE = ("/more", "Ещё")
 
 
 TG_LOGIN_JS = """<script>
@@ -979,9 +997,9 @@ addEventListener('DOMContentLoaded',function(){
   .then(function(x){
     if(x[0]){location.replace('/');return}
     box.textContent=x[1].error==='not_dispatcher'
-      ?'Avval botda /start bosing, keyin panelni qayta oching.'
-      :'Telegram orqali kirib bo‘lmadi — parol bilan kiring.';
-  }).catch(function(){box.textContent='Tarmoq xatosi — parol bilan kiring.'});
+      ?'Сначала нажмите /start в боте, затем откройте панель снова.'
+      :'Не удалось войти через Telegram — войдите по паролю.';
+  }).catch(function(){box.textContent='Ошибка сети — войдите по паролю.'});
 });
 </script>"""
 
@@ -1020,17 +1038,17 @@ def _decision_buttons(match_id: int, alts: bool = True) -> str:
     target = f'hx-target="#m{match_id}" hx-swap="outerHTML"'
     m = db.get_match(match_id)
     truck = f" · №{e(m['truck_id'])}" if m is not None else ""
-    other = (f'<button type="button" class="btn sm" title="Boshqa fura tanlash" '
+    other = (f'<button type="button" class="btn sm" title="Выбрать другую фуру" '
              f'style="margin-left:6px" hx-get="/match/{match_id}/alt" '
              f'hx-target="#alt-{match_id}" hx-swap="innerHTML">{ic("truck", 15)}</button>'
              if alts else "")
     return (f'<form method="post" action="/match/{match_id}/take" class="inline" '
             f'hx-post="/match/{match_id}/take" {target}>'
-            f'<button class="btn ok sm" title="Shu furaga olaman">{ic("check", 15)} '
-            f'Olaman{truck}</button></form>{other}'
+            f'<button class="btn ok sm" title="Беру на эту фуру">{ic("check", 15)} '
+            f'Беру{truck}</button></form>{other}'
             f'<form method="post" action="/match/{match_id}/skip" class="inline" '
             f'style="margin-left:6px" hx-post="/match/{match_id}/skip" {target}>'
-            f'<button class="btn sm" title="O\'tkazish">{ic("skip", 15)}</button></form>')
+            f'<button class="btn sm" title="Пропустить">{ic("skip", 15)}</button></form>')
 
 
 def _alt_trucks(match_id: int) -> str:
@@ -1042,10 +1060,10 @@ def _alt_trucks(match_id: int) -> str:
     import ai_tools
     m = db.get_match(match_id)
     if m is None:
-        return '<div class="muted">Taklif topilmadi</div>'
+        return '<div class="muted">Предложение не найдено</div>'
     row = db.get_cargo(m["cargo_id"])
     if row is None or row["status"] != "new":
-        return '<div class="muted">Yuk allaqachon olingan</div>'
+        return '<div class="muted">Груз уже взят</div>'
     cargo = {k: row[k] for k in row.keys()}
     skipped = ai_tools._skipped_pairs()
     fit, unfit = [], []
@@ -1053,11 +1071,11 @@ def _alt_trucks(match_id: int) -> str:
         if t["id"] == m["truck_id"]:
             continue
         if (cargo["id"], str(t["id"])) in skipped:
-            unfit.append((t["id"], "siz o'tkazib yuborgansiz"))
+            unfit.append((t["id"], "вы пропустили"))
             continue
         r = scoring.evaluate(cargo, t)
         if not r["ok"]:
-            unfit.append((t["id"], (r["reasons"] or ["mos emas"])[0]))
+            unfit.append((t["id"], (r["reasons"] or ["не подходит"])[0]))
             continue
         mid = ai_tools._ensure_match(cargo, t["id"], r)
         if mid:
@@ -1066,32 +1084,32 @@ def _alt_trucks(match_id: int) -> str:
     rows = []
     for margin, t, r, mid in fit:
         rows.append(
-            f'<div class="alt"><div class="grow"><b>№{e(t["id"])}</b> · {e(t["current_city"] or "—")}'
-            f'<div class="muted">bo\'sh {r["empty_km"]} km · {r["trip_days"]} kun'
-            f'{" · marja " + money(r["margin_usd"]) if r.get("margin_usd") is not None else ""}'
+            f'<div class="alt"><div class="grow"><b>№{e(t["id"])}</b> · {ru(t["current_city"] or "—")}'
+            f'<div class="muted">пустой {r["empty_km"]} км · {r["trip_days"]} дн.'
+            f'{" · маржа " + money(r["margin_usd"]) if r.get("margin_usd") is not None else ""}'
             f'</div></div><form method="post" action="/match/{mid}/take" class="inline" '
             f'hx-post="/match/{mid}/take" hx-target="#m{match_id}" hx-swap="outerHTML">'
             f'<button class="btn ok sm">{ic("check", 15)} №{e(t["id"])}</button></form></div>')
     for tid, why in unfit:
         rows.append(f'<div class="alt off"><b>№{e(tid)}</b> <span class="muted">— {e(why)}</span></div>')
-    return "".join(rows) or '<div class="muted">Boshqa fura yo\'q</div>'
+    return "".join(rows) or '<div class="muted">Других фур нет</div>'
 
 
 def _taken_card(res, driver_ok: bool) -> str:
     """Olgandan keyin — o'sha joyda aniq tasdiq: qaysi fura, qachon bo'shaydi, bekor qilish."""
     c, truck_id, mid = res.cargo, res.match["truck_id"], res.match["id"]
-    driver = ("haydovchiga Telegram orqali yuborildi" if driver_ok else
-              "haydovchi botga ulanmagan — reysni o'zingiz yetkazing")
+    driver = ("водителю отправлено в Telegram" if driver_ok else
+              "водитель не подключён к боту — передайте рейс сами")
     return f"""<div class="deal taken" id="m{mid}">
-  <div class="row1"><b>{anim("party", 22)} Olindi — Fura №{e(truck_id)}</b>
-  <span class="pill info">Yo'lda</span></div>
-  <div class="meta">#{c['id']} {e(c['from_city'])} → {e(c['to_city'])} ·
-  yuklash {e(_day_text(c.get('load_date')))} · <b>{e(_day_text(res.free_date))}</b> bo'shaydi</div>
+  <div class="row1"><b>{anim("party", 22)} Груз взят — фура №{e(truck_id)}</b>
+  <span class="pill info">В пути</span></div>
+  <div class="meta">#{c['id']} {ru(c['from_city'])} → {ru(c['to_city'])} ·
+  погрузка {e(_day_text(c.get('load_date')))} · освободится <b>{e(_day_text(res.free_date))}</b></div>
   <div class="meta">{e(driver)}</div>
   <div class="acts"><form method="post" action="/trip/{mid}/undo" class="inline"
-    onsubmit="return confirm('Reys bekor qilinsinmi?')">
-    <button class="btn sm">{ic("refresh", 15)} Bekor qilish</button></form>
-    <a class="btn sm" href="/truck/{e(truck_id)}">{ic("truck", 15)} Fura №{e(truck_id)}</a></div>
+    onsubmit="return confirm('Отменить рейс?')">
+    <button class="btn sm">{ic("refresh", 15)} Отменить</button></form>
+    <a class="btn sm" href="/truck/{e(truck_id)}">{ic("truck", 15)} Фура №{e(truck_id)}</a></div>
 </div>"""
 
 
@@ -1100,9 +1118,9 @@ def _toast(text: str) -> str:
     return f'<div id="toast" hx-swap-oob="true"><div class="toast-msg">{text}</div></div>'
 
 
-_MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust",
-           "sentyabr", "oktyabr", "noyabr", "dekabr"]
-_WEEKDAYS = ["dushanba", "seshanba", "chorshanba", "payshanba", "juma", "shanba", "yakshanba"]
+_MONTHS = ["января", "февраля", "марта", "апреля", "мая", "июня", "июля", "августа",
+           "сентября", "октября", "ноября", "декабря"]
+_WEEKDAYS = ["понедельник", "вторник", "среда", "четверг", "пятница", "суббота", "воскресенье"]
 
 
 def _as_day(value) -> date | None:
@@ -1113,17 +1131,17 @@ def _as_day(value) -> date | None:
 
 
 def _day_text(value) -> str:
-    """Sana odamcha: "bugun", "ertaga", "30 sentyabr"."""
+    """Sana odamcha: "сегодня", "завтра", "30 сентября"."""
     d = _as_day(value)
     if d is None:
-        return "sana yo'q"
+        return "без даты"
     delta = (d - date.today()).days
     if delta == 0:
-        return "bugun"
+        return "сегодня"
     if delta == 1:
-        return "ertaga"
+        return "завтра"
     if delta == -1:
-        return "kecha"
+        return "вчера"
     return f"{d.day} {_MONTHS[d.month - 1]}"
 
 
@@ -1131,21 +1149,21 @@ def _free_text(value) -> str:
     """Fura qachon bo'sh: o'tgan sana = hozir bo'sh."""
     d = _as_day(value)
     if d is None:
-        return "bo'shash sanasi yo'q"
+        return "дата освобождения не указана"
     if d <= date.today():
-        return "hozir bo'sh"
-    return f"{_day_text(d)} bo'shaydi"
+        return "свободна сейчас"
+    return f"освободится {_day_text(d)}"
 
 
 def _price_short(row) -> str | None:
-    """Yuk narxi asl valyutada, qisqa: "$5 000", "55 mln so'm", "400 000 ₽"."""
+    """Yuk narxi asl valyutada, qisqa: "$5 000", "55 млн сум", "400 000 ₽"."""
     rate, cur = row["rate"], row["currency"]
     if not rate or not cur:
         return None
     if cur == "USD":
         return money(rate)
     if cur == "UZS":
-        return f"{rate / 1_000_000:g} mln so'm"
+        return f"{rate / 1_000_000:g} млн сум"
     if cur == "RUB":
         return f"{rate:,.0f} ₽".replace(",", " ")
     return f"{rate:,.0f} {cur}".replace(",", " ")
@@ -1160,14 +1178,14 @@ def _price_big(row) -> str:
         return f'<div class="pd">{e(price)}</div>'
     ask = _ask_price(_details(row)) if "details" in row.keys() else None
     if ask:
-        return f'<div class="pd ask">≥ {money(ask)}<small> so\'rang</small></div>'
-    return '<div class="pd none">narx yo\'q</div>'
+        return f'<div class="pd ask"><small>просить </small>от {money(ask)}</div>'
+    return '<div class="pd none">нет цены</div>'
 
 
 def _per_day(value) -> str:
     """Eski nom — endi marja (kunlik emas) ko'rsatiladi."""
     if value is None:
-        return '<div class="pd none">narx yo\'q</div>'
+        return '<div class="pd none">нет цены</div>'
     return f'<div class="pd">{money(value)}</div>'
 
 
@@ -1187,7 +1205,7 @@ def _deal(match_id, cargo_id, route_from, route_to, per_day, meta: str,
     `id="m.."` — HTMX "Olaman/O'tkazish" javobi shu blokni almashtiradi.
     """
     return f"""<div class="deal" id="m{match_id}">
-  <div class="row1"><a class="route" href="/cargo/{cargo_id}">{e(route_from)} → {e(route_to)}</a>
+  <div class="row1"><a class="route" href="/cargo/{cargo_id}">{ru(route_from)} → {ru(route_to)}</a>
   {right if right is not None else _per_day(per_day)}</div>
   <div class="meta">{meta}</div>
   {f'<div class="acts">{actions}</div>' if actions else ''}
@@ -1199,12 +1217,12 @@ def _offer(row) -> str:
     """Taklif: o'ngda yuk NARXI (yashil); pastda marja, bo'sh probeg, sana, kunlar."""
     d = _details(row)
     when = e(_day_text(row["load_date"]))
-    empty = f"bo'sh {row['empty_km']:.0f} km"
+    empty = f"пустой {row['empty_km']:.0f} км"
     days = d.get("trip_days", "—")
     if row["margin_usd"] is None:
-        meta = f"narxi yozilmagan · {empty} · {when} · {days} kun"
+        meta = f"цена не указана · {empty} · {when} · {days} дн."
     else:
-        meta = f"marja {money(row['margin_usd'])} · {empty} · {when} · {days} kun"
+        meta = f"маржа {money(row['margin_usd'])} · {empty} · {when} · {days} дн."
     return _deal(row["id"], row["cargo_id"], row["from_city"], row["to_city"],
                  None, meta, _decision_buttons(row["id"]), right=_price_big(row))
 
@@ -1219,7 +1237,7 @@ def _best_offers(truck_id: str, n: int) -> list:
     return search.best_offers(truck_id, n)
 
 
-def _ask_ai_button(question: str, label: str = "AI dan so'rash") -> str:
+def _ask_ai_button(question: str, label: str = "Спросить AI") -> str:
     return (f'<a class="btn sm" href="/chat?{urlencode({"q": question})}">'
             f'{ic("spark", 14)} {label}</a>')
 
@@ -1230,13 +1248,13 @@ _STATE_EMOJI = {"free": "truck", "trip": "truck", "later": "alarm", "off": "slee
 def _truck_state(t, trips) -> tuple[str, str]:
     """(holat, matn): free | trip | later | off — kartochkada rangli nuqta bilan."""
     if not t["active"]:
-        return "off", "o'chirilgan"
+        return "off", "отключена"
     if trips:
-        return "trip", f"Yo'lda · {_day_text(t['free_date'])} bo'shaydi"
+        return "trip", f"В пути · освободится {_day_text(t['free_date'])}"
     d = _as_day(t["free_date"])
     if d is None or d <= date.today():
-        return "free", "Bo'sh"
-    return "later", f"{_day_text(d)} bo'shaydi"
+        return "free", "Свободна"
+    return "later", f"Освободится {_day_text(d)}"
 
 
 def _trip_free_date(trip) -> str:
@@ -1251,20 +1269,20 @@ def _trip_block(trip, show_truck: bool = False) -> str:
     total = max((end - start).days, 1)
     done = min(max((date.today() - start).days, 0), total)
     truck = f'<span class="tnum">№{e(trip["truck_id"])}</span> ' if show_truck else ""
-    actual = (f" · haqiqiy {money(trip['actual_margin_usd'])}"
+    actual = (f" · факт {money(trip['actual_margin_usd'])}"
               if trip["actual_margin_usd"] is not None else "")
     finish = (f'<form method="post" action="/trip/{trip["id"]}/finish" class="inline">'
-              f'<button class="btn sm ok">{ic("check", 15)} Reys tugadi</button></form>')
+              f'<button class="btn sm ok">{ic("check", 15)} Рейс завершён</button></form>')
     undo = (f'<form method="post" action="/trip/{trip["id"]}/undo" class="inline" '
-            f'onsubmit="return confirm(\'Reys bekor qilinsinmi? Yuk yana bo\\\'sh bo\\\'ladi, '
-            f'fura oldingi joyiga qaytadi.\')">'
-            f'<button class="btn sm">{ic("refresh", 15)} Bekor qilish</button></form>')
+            f'onsubmit="return confirm(\'Отменить рейс? Груз снова станет свободным, '
+            f'фура вернётся на прежнее место.\')">'
+            f'<button class="btn sm">{ic("refresh", 15)} Отменить</button></form>')
     return f"""<div class="trip">
-  <div class="row1"><span>{truck}<a class="route" href="/cargo/{trip['cargo_id']}">{e(trip['from_city'])} → {e(trip['to_city'])}</a></span>
-  <span class="pill info">Yo'lda</span></div>
-  <div class="meta">yuk #{trip['cargo_id']} · yuklash {e(_day_text(trip['load_date']))} ·
-  <b>{e(_day_text(free))}</b> bo'shaydi · prognoz {money(trip['margin_usd'])}{actual}</div>
-  <div class="road" title="{done}/{total} kun"><div class="bar"><i style="width:{done * 100 // total}%"></i></div>
+  <div class="row1"><span>{truck}<a class="route" href="/cargo/{trip['cargo_id']}">{ru(trip['from_city'])} → {ru(trip['to_city'])}</a></span>
+  <span class="pill info">В пути</span></div>
+  <div class="meta">груз #{trip['cargo_id']} · погрузка {e(_day_text(trip['load_date']))} ·
+  освободится <b>{e(_day_text(free))}</b> · прогноз {money(trip['margin_usd'])}{actual}</div>
+  <div class="road" title="{done}/{total} дн."><div class="bar"><i style="width:{done * 100 // total}%"></i></div>
   <span class="rider" style="left:max(0px, calc({done * 100 // total}% - 28px))">{anim("truck", 28)}</span></div>
   <div class="acts">{finish}{undo}</div>
 </div>"""
@@ -1277,24 +1295,24 @@ def _truck_card(t, offers, trips=()) -> str:
         temp = f" {t['temp_min']:g}…{t['temp_max']:g}°"
     state, label = _truck_state(t, trips)
     where = t["current_city"] or "—"
-    title = f"{e(trips[-1]['from_city'])} → {e(where)}" if trips else e(where)
+    title = f"{ru(trips[-1]['from_city'])} → {ru(where)}" if trips else ru(where)
     snow = anim("snow", 16) if t["body_type"] == "ref" else ""
     header = f"""<a class="li" href="/truck/{e(t['id'])}"><span class="tnum big">№{e(t['id'])}</span>
   <div class="main"><span class="t">{title}</span>
   <div class="s"><span class="tstate"><span class="dot s-{state}"></span>{e(label)}</span>
-  · {snow}{e(body)}{e(temp)} · {t['capacity_t'] or 0:g} t</div></div>
+  · {snow}{e(body)}{e(temp)} · {t['capacity_t'] or 0:g} т</div></div>
   <span class="end">{anim(_STATE_EMOJI[state], 32)}{ic("chevron", 16, "chev")}</span></a>"""
     parts = [header] + [_trip_block(tr) for tr in trips]
     if not t["active"]:
         return (f'<section class="card tcard truck off" id="truck-{e(t["id"])}">'
                 f'{"".join(parts)}</section>')
     if trips:
-        parts.append(f'<div class="sub-h">Keyingi yuk — {e(where)}dan</div>')
+        parts.append(f'<div class="sub-h">Следующий груз — из г. {ru(where)}</div>')
     if offers:
         parts += [_offer(o) for o in offers]
     else:
-        ask = f"{t['id']} fura uchun yuk top"
-        parts.append(f'<div class="empty-row"><span>{anim("eyes", 22)}Hozircha mos yuk yo\'q</span>'
+        ask = f"Найди груз для фуры {t['id']}"
+        parts.append(f'<div class="empty-row"><span>{anim("eyes", 22)}Пока подходящих грузов нет</span>'
                      f'{_ask_ai_button(ask)}</div>')
     cls = "card tcard truck ontrip" if trips else "card tcard truck"
     return f'<section class="{cls}" id="truck-{e(t["id"])}">{"".join(parts)}</section>'
@@ -1305,25 +1323,25 @@ def _truck_row(t, trips=()) -> str:
     body = BODY.get(t["body_type"], t["body_type"] or "—")
     state, label = _truck_state(t, trips)
     where = t["current_city"] or "—"
-    title = f"{e(trips[-1]['from_city'])} → {e(where)}" if trips else e(where)
+    title = f"{ru(trips[-1]['from_city'])} → {ru(where)}" if trips else ru(where)
     driver = f" · {e(t['driver'])}" if t["driver"] else ""
     return f"""<a class="li" href="/truck/{e(t['id'])}"><span class="tnum big">№{e(t['id'])}</span>
   <div class="main"><span class="t">{title}</span>
   <div class="s"><span class="tstate"><span class="dot s-{state}"></span>{e(label)}</span>
-  · {e(body)} {t['capacity_t'] or 0:g} t{driver}</div></div>
+  · {e(body)} {t['capacity_t'] or 0:g} т{driver}</div></div>
   <span class="end">{ic("chevron", 16, "chev")}</span></a>"""
 
 
 def _park_tabs(active: str) -> str:
-    items = [("/trucks", "Furalar"), ("/history", "Reyslar")]
+    items = [("/trucks", "Фуры"), ("/history", "Рейсы")]
     return '<div class="seg full">' + "".join(
         f'<a class="{"on" if href == active else ""}" href="{href}">{label}</a>'
         for href, label in items) + "</div>"
 
 
 def _cargo_tabs(active: str) -> str:
-    """"Yuklar" ichidagi iOS segment: Ro'yxat | Qidiruv | Xarita."""
-    items = [("/cargos", "Ro'yxat"), ("/search", "Qidiruv"), ("/map", "Xarita")]
+    """"Грузы" ichidagi iOS segment: Список | Поиск | Карта."""
+    items = [("/cargos", "Список"), ("/search", "Поиск"), ("/map", "Карта")]
     return '<div class="seg full">' + "".join(
         f'<a class="{"on" if href == active else ""}" href="{href}">{label}</a>'
         for href, label in items) + "</div>"
@@ -1340,9 +1358,9 @@ def create_app() -> FastAPI:
         ip = _client_ip(request)
         path = request.url.path
         if path != "/health" and not _ip_allowed(ip):
-            return Response("Ruxsat yo'q", status_code=403)
+            return Response("Доступ запрещён", status_code=403)
         if request.method == "POST" and not _same_origin(request):
-            return Response("Boshqa saytdan so'rov rad etildi", status_code=403)
+            return Response("Запрос с другого сайта отклонён", status_code=403)
         if path not in PUBLIC_PATHS and not path.startswith("/static/emoji/") \
                 and not token_valid(request.cookies.get(SESSION_COOKIE)):
             if _is_htmx(request):
@@ -1380,23 +1398,23 @@ def create_app() -> FastAPI:
     async def login_form(error: str = ""):
         msg = _note("err", e(error)) if error else ""
         if not _password():
-            msg = _note("err", "WEB_PASSWORD sozlanmagan — .env ga yozing")
+            msg = _note("err", "WEB_PASSWORD не задан — укажите его в .env")
         body = f"""<div style="min-height:100vh;display:grid;place-items:center;padding:20px">
 <div class="card" style="max-width:380px;width:100%;box-shadow:var(--shadow-lg)">
   <div style="text-align:center;margin-bottom:20px">
     <div>{anim("truck", 64)}</div>
     <h1 style="margin-top:8px">BAXT TRANSPORT</h1>
-    <div class="sub" style="margin:0">Dispetcher paneli</div>
+    <div class="sub" style="margin:0">Панель диспетчера</div>
   </div>{msg}
   <div id="tg-login" class="muted" style="text-align:center;margin-bottom:14px;display:none">
-    Telegram orqali kirilmoqda…</div>
+    Вход через Telegram…</div>
   <form method="post" action="/login">
-    <div class="field"><label>Parol</label>
+    <div class="field"><label>Пароль</label>
     <input type="password" name="password" autofocus required style="width:100%"></div>
-    <button class="btn primary" style="width:100%;justify-content:center">Kirish</button>
+    <button class="btn primary" style="width:100%;justify-content:center">Войти</button>
   </form>
 </div></div>"""
-        return page("Kirish", body + TG_LOGIN_JS, nav=False)
+        return page("Вход", body + TG_LOGIN_JS, nav=False)
 
     @app.post("/tg-auth")
     async def tg_auth(request: Request):
@@ -1418,8 +1436,8 @@ def create_app() -> FastAPI:
     async def login(request: Request):
         ip = _client_ip(request)
         if _locked_out(ip):
-            return page("Kirish", _note("err", "Ko'p noto'g'ri urinish. "
-                                               "10 daqiqadan keyin qayta urining."),
+            return page("Вход", _note("err", "Слишком много неудачных попыток. "
+                                               "Повторите через 10 минут."),
                         nav=False, status_code=429)
         form = await _form(request)
         password = _password()
@@ -1428,7 +1446,7 @@ def create_app() -> FastAPI:
             return _set_session(_redirect("/"))
         _login_fails.setdefault(ip, []).append(time.time())
         log.warning("Panelga noto'g'ri parol: %s", ip)
-        return _redirect("/login?" + urlencode({"error": "Parol noto'g'ri"}))
+        return _redirect("/login?" + urlencode({"error": "Неверный пароль"}))
 
     @app.post("/logout")
     async def logout():
@@ -1463,9 +1481,9 @@ def create_app() -> FastAPI:
     async def dashboard():
         today = date.today()
         c = db.counters()
-        kpis = [(c["active"], "aktiv yuk", "/cargos", "box"),
-                (c["today"], "bugun keldi", "/cargos?status=", "fire"),
-                (c["taken_week"], "olindi · 7 kun", "/history", "check")]
+        kpis = [(c["active"], "активных грузов", "/cargos", "box"),
+                (c["today"], "пришло сегодня", "/cargos?status=", "fire"),
+                (c["taken_week"], "взято · 7 дн.", "/history", "check")]
         kpi_html = '<div class="kpis">' + "".join(
             f'<a class="kpi" href="{href}">{anim(em, 26)}<b>{value}</b><span>{label}</span></a>'
             for value, label, href, em in kpis) + "</div>"
@@ -1473,12 +1491,12 @@ def create_app() -> FastAPI:
         hour = briefing.local_now().hour
         greet = anim("sun" if 6 <= hour < 18 else "star", 34)
         subtitle = f"{_WEEKDAYS[today.weekday()].capitalize()}, {today.day} {_MONTHS[today.month - 1]}"
-        return page("Bugun",
-                    top(f"Bugun{greet}", subtitle, right=f'<a class="btn sm" href="/chat?'
-                        f'{urlencode({"q": "Har furaga yuk va qaytish yukini rejalab ber"})}">'
-                        f'{ic("spark", 14)} Reja</a>')
+        return page("Сегодня",
+                    top(f"Сегодня{greet}", subtitle, right=f'<a class="btn sm" href="/chat?'
+                        f'{urlencode({"q": "Спланируй груз и обратный груз для каждой фуры"})}">'
+                        f'{ic("spark", 14)} План</a>')
                     + kpi_html
-                    + '<h2 class="sec">Furalar <small>eng foydalisi yuqorida</small></h2>'
+                    + '<h2 class="sec">Фуры <small>самые выгодные сверху</small></h2>'
                     + f"""<div class="grid fade" id="fleet"
      hx-get="/fragment/fleet" hx-trigger="every 45s"
      hx-swap="innerHTML">{_fleet_cards()}</div>""", active="/")
@@ -1489,11 +1507,11 @@ def create_app() -> FastAPI:
     async def take(match_id: int, request: Request):
         res = actions.take_match(match_id)
         if not res.ok:
-            text = {"not_found": "Taklif topilmadi",
-                    "cargo_missing": "Yuk topilmadi",
-                    "stale": "Fura boshqa reys olgan — taklif eskirgan",
-                    "already_taken": f"Allaqachon olingan — mashina №{e(res.holder or '—')}"
-                    }.get(res.reason, "Xato")
+            text = {"not_found": "Предложение не найдено",
+                    "cargo_missing": "Груз не найден",
+                    "stale": "Фура уже взяла другой рейс — предложение устарело",
+                    "already_taken": f"Уже взят — фура №{e(res.holder or '—')}"
+                    }.get(res.reason, "Ошибка")
             if _is_htmx(request):
                 return HTMLResponse(f'<div class="offer done" id="m{match_id}">{text}</div>')
             cargo_id = res.cargo["id"] if res.cargo else None
@@ -1515,8 +1533,8 @@ def create_app() -> FastAPI:
         url = f"/cargo/{res.cargo['id']}?taken=1&driver={1 if driver_ok else 0}"
         if not _is_htmx(request):
             return _redirect(url)
-        toast = _toast(f'{anim("party", 20)} Fura №{e(truck_id)} oldi: '
-                       f'{e(res.cargo["from_city"])} → {e(res.cargo["to_city"])}')
+        toast = _toast(f'{anim("party", 20)} Фура №{e(truck_id)} взяла: '
+                       f'{ru(res.cargo["from_city"])} → {ru(res.cargo["to_city"])}')
         path = urlparse(request.headers.get("hx-current-url", "")).path
         if path == "/":
             # Bosh sahifa: butun park yangilanadi — fura "Yo'lda" bo'lib ko'rinadi
@@ -1537,8 +1555,8 @@ def create_app() -> FastAPI:
     @app.post("/match/{match_id}/skip")
     async def skip(match_id: int, request: Request):
         status = actions.skip_match(match_id)
-        text = {"ok": "O'tkazildi", "decided": "Qaror avval qabul qilingan",
-                "not_found": "Taklif topilmadi"}[status]
+        text = {"ok": "Пропущено", "decided": "Решение уже принято",
+                "not_found": "Предложение не найдено"}[status]
         if _is_htmx(request):
             refreshed = _after_skip(match_id, status, request)
             if refreshed is not None:
@@ -1552,10 +1570,10 @@ def create_app() -> FastAPI:
         try:
             value = float(form.get("margin", "").replace(",", ".").replace(" ", ""))
         except ValueError:
-            return _redirect("/history?" + urlencode({"error": "Marja son bo'lishi kerak"}))
+            return _redirect("/history?" + urlencode({"error": "Маржа должна быть числом"}))
         m = db.get_match(match_id)
         if m is None:
-            return _redirect("/history?" + urlencode({"error": "Taklif topilmadi"}))
+            return _redirect("/history?" + urlencode({"error": "Предложение не найдено"}))
         if m["decision"] == "taken":
             actions.finish_trip(match_id, value)     # haqiqiy marja = reys tugadi
         else:
@@ -1575,34 +1593,34 @@ def create_app() -> FastAPI:
         text = (request.query_params.get("q") or "").strip()
         notes = ""
         if request.query_params.get("watched"):
-            notes = _note("ok", "Kuzatuvga qo'shildi. Shunday yuk chiqsa — "
-                                "Telegramga darhol xabar boradi.")
+            notes = _note("ok", "Добавлено в отслеживание. Как только появится такой "
+                                "груз — сразу придёт сообщение в Telegram.")
 
         chips = "".join(
             f'<a class="chip" href="/search?{urlencode({"q": ex})}">{e(ex)}</a>'
-            for ex in ("Toshkent Moskva", "Moskva", "Toshkent Almaty ref",
-                       "Samarqand Qozon"))
+            for ex in ("Ташкент Москва", "Москва", "Ташкент Алматы реф",
+                       "Самарканд Казань"))
         form = f"""<form class="searchbar" method="get" action="/search">
   <div class="sfield">{ic("search", 17)}<input name="q" value="{e(text)}" list="cities"
-    placeholder="Toshkent Moskva ref" aria-label="Qayerdan qayerga"></div>
-  <button class="btn primary">Qidirish</button>
+    placeholder="Ташкент Москва реф" aria-label="Откуда куда"></div>
+  <button class="btn primary">Найти</button>
 </form>{_city_datalist()}
 <div class="chips scroll" style="margin:0 0 18px">{chips}</div>"""
 
-        body = (top("Yuklar", "Qidiruv bizning park bo'yicha: qaysi fura va kuniga qancha")
+        body = (top("Грузы", "Поиск по нашему парку: какая фура возьмёт и сколько заработает")
                 + _cargo_tabs("/search"))
         if not text:
-            return page("Qidiruv", body + notes + form + _watch_block(), active="/search")
+            return page("Поиск", body + notes + form + _watch_block(), active="/search")
 
         query = search_mod.parse_query(text)
         if query.is_empty:
-            return page("Qidiruv", body + notes + form
-                        + _note("err", f"«{e(text)}» tushunarsiz. Shahar nomini "
-                                       f"yozing, masalan: <b>Toshkent Moskva</b>")
+            return page("Поиск", body + notes + form
+                        + _note("err", f"«{e(text)}» — непонятно. Напишите "
+                                       f"города, например: <b>Ташкент Москва</b>")
                         + _watch_block(), active="/search")
 
         found = search_mod.find(query, top=20)
-        return page("Qidiruv", body + notes + form
+        return page("Поиск", body + notes + form
                     + _search_results(found, text) + _watch_block(),
                     active="/search")
 
@@ -1640,7 +1658,7 @@ def create_app() -> FastAPI:
                 return None
             found = geo.lookup(raw)
             if not found:
-                notes.append(_note("err", f"«{e(raw)}» shahri topilmadi"))
+                notes.append(_note("err", f"Город «{e(raw)}» не найден"))
                 return raw           # kanonik emas — hech narsa topilmaydi
             return found
 
@@ -1663,30 +1681,31 @@ def create_app() -> FastAPI:
 
         active_filters = sum(1 for k in ("from", "to", "body", "min_score", "q") if q.get(k))
         filters = f"""<details class="fdet"{' open' if active_filters else ''}>
-<summary class="btn sm">{ic("filter", 15)} Filtr{f' · {active_filters}' if active_filters else ''}</summary>
+<summary class="btn sm">{ic("filter", 15)} Фильтр{f' · {active_filters}' if active_filters else ''}</summary>
 <form class="filters" method="get">
-  <div><label>Qayerdan</label><input name="from" value="{e(q.get('from', ''))}" list="cities" size="12"></div>
-  <div><label>Qayerga</label><input name="to" value="{e(q.get('to', ''))}" list="cities" size="12"></div>
-  <div><label>Kuzov</label><select name="body">{opt([('', 'hammasi')] + list(BODY.items()), body_type or '')}</select></div>
-  <div><label>Holat</label><select name="status">{opt([('', 'hammasi')] + list(STATUS.items()), status or '')}</select></div>
-  <div><label>Ball ≥</label><input name="min_score" type="number" min="0" max="100" value="{e(q.get('min_score', ''))}" style="width:80px"></div>
-  <div><label>Matndan qidirish</label><input name="q" value="{e(search or '')}" size="14"></div>
-  <button class="btn primary">Ko'rsatish</button> <a class="btn" href="/cargos">Tozalash</a>
+  <div><label>Откуда</label><input name="from" value="{e(q.get('from', ''))}" list="cities" size="12"></div>
+  <div><label>Куда</label><input name="to" value="{e(q.get('to', ''))}" list="cities" size="12"></div>
+  <div><label>Кузов</label><select name="body">{opt([('', 'все')] + list(BODY.items()), body_type or '')}</select></div>
+  <div><label>Статус</label><select name="status">{opt([('', 'все')] + list(STATUS.items()), status or '')}</select></div>
+  <div><label>Балл ≥</label><input name="min_score" type="number" min="0" max="100" value="{e(q.get('min_score', ''))}" style="width:80px"></div>
+  <div><label>Поиск по тексту</label><input name="q" value="{e(search or '')}" size="14"></div>
+  <button class="btn primary">Показать</button> <a class="btn" href="/cargos">Сбросить</a>
 </form></details>{_city_datalist()}"""
 
         items = []
         for r in rows:
             items.append(f"""<div class="li">{_ring(r['best_score'], small=True)}
-  <div class="main"><a class="t route" href="/cargo/{r['id']}">{e(r['from_city'])} → {e(r['to_city'])}</a>
+  <div class="main"><a class="t route" href="/cargo/{r['id']}">{ru(r['from_city'])} → {ru(r['to_city'])}</a>
     <div class="s">{_cargo_line(r)} · {_rate_text(r)} · {e(_day_text(r['load_date']))}</div>
     <div class="s">{e(r['source'] or '')} · {e(ago_phrase(r['created_at']))}</div>
     <div class="s clamp">{e(r['raw_text'])}</div></div>
   <span class="end">{_status_pill(r['status'])}</span></div>""")
         listing = (f'<div class="list">{"".join(items)}</div>' if items else
-                   _empty("Bunday yuk topilmadi. Filtrni kengaytiring "
-                          "yoki holatni «hammasi» qiling.", "search"))
-        return page("Yuklar",
-                    top("Yuklar", f"{len(rows)} ta · guruhlardan avtomatik yig'iladi")
+                   _empty("Таких грузов нет. Расширьте фильтр "
+                          "или выберите статус «все».", "search"))
+        return page("Грузы",
+                    top("Грузы", f"{len(rows)} {plural(len(rows), 'груз', 'груза', 'грузов')}"
+                                 f" · собираются из групп автоматически")
                     + _cargo_tabs("/cargos")
                     + "".join(notes) + filters + listing, active="/cargos")
 
@@ -1694,47 +1713,47 @@ def create_app() -> FastAPI:
     async def cargo_detail(cargo_id: int, taken: str = "", driver: str = ""):
         c = db.get_cargo(cargo_id)
         if c is None:
-            return page("Topilmadi", _note("err", f"Yuk #{cargo_id} topilmadi"),
+            return page("Не найдено", _note("err", f"Груз #{cargo_id} не найден"),
                         status_code=404)
         matches = db.matches_for_cargo(cargo_id)
         notes = ""
         if taken:
             holder = db.taken_truck_for_cargo(cargo_id)
-            said = (f"Fura №{e(holder)} ga biriktirildi. " if holder else "") + \
-                ("Haydovchiga Telegram orqali yuborildi." if driver == "1" else
-                    "Haydovchi botga ulanmagan — reysni o'zingiz yetkazing (Park → fura → "
-                    "Telegram qatorida qanday ulash yozilgan).")
-            notes = _note("ok", f'{anim("party", 24)} Reys biriktirildi. {said}')
+            said = (f"Назначен на фуру №{e(holder)}. " if holder else "") + \
+                ("Водителю отправлено в Telegram." if driver == "1" else
+                    "Водитель не подключён к боту — передайте рейс сами (Парк → фура → "
+                    "в строке Telegram написано, как подключить).")
+            notes = _note("ok", f'{anim("party", 24)} Рейс назначен. {said}')
 
         via = ""
         try:
             via_list = json.loads(c["via"]) if c["via"] else []
             if via_list:
-                via = f'<div class="muted">orqali: {e(", ".join(via_list))}</div>'
+                via = f'<div class="muted">через: {e(", ".join(geo.ru(v) for v in via_list))}</div>'
         except ValueError:
             pass
 
         contact = " · ".join(filter(None, [
             f'<a href="tel:{e(c["phone"])}">{e(c["phone"])}</a>' if c["phone"] else "",
             f'<a href="https://t.me/{e(c["username"])}">@{e(c["username"])}</a>'
-            if c["username"] else ""])) or '<span class="muted">yo\'q</span>'
+            if c["username"] else ""])) or '<span class="muted">нет</span>'
 
-        info = f"""<a class="back" href="/cargos">{ic("back", 20)}Yuklar</a><div class="card">
+        info = f"""<a class="back" href="/cargos">{ic("back", 20)}Грузы</a><div class="card">
   <header>
-    <div><h1 style="margin:0">{e(c['from_city'])} → {e(c['to_city'])}</h1>
-      <div class="sub" style="margin:2px 0 0">Yuk #{c['id']} ·
+    <div><h1 style="margin:0">{ru(c['from_city'])} → {ru(c['to_city'])}</h1>
+      <div class="sub" style="margin:2px 0 0">Груз #{c['id']} ·
         {e(ago_phrase(c['created_at']))} · {e(c['source'] or '?')}</div>{via}</div>
     {_status_pill(c['status'])}
   </header>
   <div class="row" style="margin-top:10px">
-    <div class="field"><label>Yuk</label>{_cargo_line(c)}</div>
-    <div class="field"><label>Stavka</label>{_rate_text(c)}</div>
-    <div class="field"><label>Yuklash</label>{e(c['load_date'] or '—')}</div>
-    <div class="field"><label>Kontakt</label>{contact}</div>
-    <div class="field"><label>Tahlil ishonchi</label>
+    <div class="field"><label>Груз</label>{_cargo_line(c)}</div>
+    <div class="field"><label>Ставка</label>{_rate_text(c)}</div>
+    <div class="field"><label>Погрузка</label>{e(c['load_date'] or '—')}</div>
+    <div class="field"><label>Контакт</label>{contact}</div>
+    <div class="field"><label>Уверенность разбора</label>
       <span class="num">{c['confidence'] or 0:.2f}</span></div>
   </div>
-  <h2>Asl e'lon</h2><pre>{e(c['raw_text'])}</pre>
+  <h2>Исходное объявление</h2><pre>{e(c['raw_text'])}</pre>
 </div>"""
 
         deals = []
@@ -1742,19 +1761,19 @@ def create_app() -> FastAPI:
             d = _details(m)
             action = _decision_buttons(m["id"], alts=False) if c["status"] == "new" and not m["decision"] \
                 else f'<span class="pill">{e(DECISION.get(m["decision"], m["decision"] or ""))}</span>'
-            meta = (f'<span class="tnum">№{e(m["truck_id"])}</span> · bo\'sh {m["empty_km"]:.0f} + '
-                    f'yuk {m["loaded_km"]:.0f} km · {d.get("trip_days", "—")} kun<br>'
-                    f'xarajat {money(d.get("total_cost"))} · marja '
-                    f'<span class="money">{money(m["margin_usd"])}</span> · ball {m["score"]:.0f}')
+            meta = (f'<span class="tnum">№{e(m["truck_id"])}</span> · пустой {m["empty_km"]:.0f} + '
+                    f'гружёный {m["loaded_km"]:.0f} км · {d.get("trip_days", "—")} дн.<br>'
+                    f'расходы {money(d.get("total_cost"))} · маржа '
+                    f'<span class="money">{money(m["margin_usd"])}</span> · балл {m["score"]:.0f}')
             deals.append(f"""<div class="deal" id="m{m['id']}">
-  <div class="row1"><b>Fura №{e(m['truck_id'])}</b>{_per_day(m['margin_usd'])}</div>
+  <div class="row1"><b>Фура №{e(m['truck_id'])}</b>{_per_day(m['margin_usd'])}</div>
   <div class="meta">{meta}</div><div class="acts">{action}</div></div>""")
-        match_table = (f'<h2 class="sec">Furalar bo\'yicha hisob '
-                       f'<small>marja — foyda</small></h2>'
+        match_table = (f'<h2 class="sec">Расчёт по фурам '
+                       f'<small>маржа — прибыль</small></h2>'
                        + (f'<div class="list">{"".join(deals)}</div>' if deals else
-                          _empty("Bu yukni birorta fura ko'tara olmaydi", "ban")))
+                          _empty("Ни одна фура не может взять этот груз", "ban")))
 
-        return page(f"Yuk #{cargo_id}",
+        return page(f"Груз #{cargo_id}",
                     notes + info + match_table + _return_block(c, matches),
                     active="/cargos")
 
@@ -1765,18 +1784,19 @@ def create_app() -> FastAPI:
         trucks = db.get_trucks(active_only=False)
         active_n = sum(1 for t in trucks if t["active"])
         listing = (f'<div class="list">{"".join(_truck_row(t, db.active_trips(t["id"])) for t in trucks)}</div>'
-                   if trucks else _note("info", "Park bo'sh — <code>python main.py init</code> "
-                                                "bilan trucks.json ni yuklang."))
-        add_btn = f'<a class="btn sm primary" href="/trucks/new">{ic("plus", 15)} Fura</a>'
-        return page("Park",
-                    top("Park", f"{len(trucks)} ta fura · {active_n} tasi faol", right=add_btn)
+                   if trucks else _note("info", "Парк пуст — загрузите trucks.json командой "
+                                                "<code>python main.py init</code>."))
+        add_btn = f'<a class="btn sm primary" href="/trucks/new">{ic("plus", 15)} Фура</a>'
+        count = f"{len(trucks)} {plural(len(trucks), 'фура', 'фуры', 'фур')} · активных: {active_n}"
+        return page("Парк",
+                    top("Парк", count, right=add_btn)
                     + _park_tabs("/trucks") + listing
-                    + '<p class="muted" style="margin:12px 4px">Furani bosing — joylashuvi, '
-                      'takliflari, tarixi va tahrirlash.</p>', active="/trucks")
+                    + '<p class="muted" style="margin:12px 4px">Нажмите на фуру — местоположение, '
+                      'предложения, история и редактирование.</p>', active="/trucks")
 
     @app.get("/trucks/new")
     async def truck_new_form():
-        return page("Yangi fura", _truck_new_page(), active="/trucks")
+        return page("Новая фура", _truck_new_page(), active="/trucks")
 
     @app.post("/trucks/new")
     async def truck_new(request: Request):
@@ -1784,7 +1804,7 @@ def create_app() -> FastAPI:
         form = await _form(request)
         truck, errors = _parse_new_truck(form)
         if errors:
-            return page("Yangi fura", _truck_new_page(form, errors), active="/trucks",
+            return page("Новая фура", _truck_new_page(form, errors), active="/trucks",
                         status_code=400)
         db.upsert_truck(truck)
         # Yangi fura uchun mavjud yuklar ham hisoblansin (bildirishnomasiz)
@@ -1795,7 +1815,7 @@ def create_app() -> FastAPI:
     async def truck_save(truck_id: str, request: Request):
         truck = db.get_truck(truck_id)
         if truck is None:
-            return page("Topilmadi", _note("err", "Mashina topilmadi"), status_code=404)
+            return page("Не найдено", _note("err", "Фура не найдена"), status_code=404)
         form = await _form(request)
         errors, fields = [], {}
 
@@ -1807,17 +1827,17 @@ def create_app() -> FastAPI:
                 found = geo.find_cities(raw_city)
                 city = found[0][1] if found else None
             if not city:
-                errors.append(f"«{e(raw_city)}» shahri topilmadi")
+                errors.append(f"Город «{e(raw_city)}» не найден")
 
         free_date = form.get("free_date", "").strip() or None
         if free_date:
             try:
                 free_date = date.fromisoformat(free_date).isoformat()
             except ValueError:
-                errors.append("Sana noto'g'ri")
+                errors.append("Неверная дата")
 
-        for name, label, lo, hi in (("capacity_t", "Sig'im", 1, 40),
-                                    ("fuel_l_100km", "Yoqilg'i sarfi", 10, 70)):
+        for name, label, lo, hi in (("capacity_t", "Грузоподъёмность", 1, 40),
+                                    ("fuel_l_100km", "Расход топлива", 10, 70)):
             raw = form.get(name, "").strip().replace(",", ".")
             if raw:
                 try:
@@ -1826,7 +1846,7 @@ def create_app() -> FastAPI:
                         raise ValueError
                     fields[name] = value
                 except ValueError:
-                    errors.append(f"{label}: {lo}–{hi} oralig'ida son kiriting")
+                    errors.append(f"{label}: введите число от {lo} до {hi}")
 
         direction = form.get("preferred_dir", "")
         if direction in DIRECTIONS:
@@ -1864,14 +1884,14 @@ def create_app() -> FastAPI:
         libs = ('<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">'
                 '<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>')
         legend = f"""<div class="legend">
-  <span>{ic("truck", 15)} mashinalar</span>
-  <span><i style="background:var(--ok)"></i>ball ≥ 85</span>
+  <span>{ic("truck", 15)} фуры</span>
+  <span><i style="background:var(--ok)"></i>балл ≥ 85</span>
   <span><i style="background:#ca8a04"></i>65–84</span>
-  <span><i style="background:#9ca3af"></i>past</span>
+  <span><i style="background:#9ca3af"></i>низкий</span>
 </div>"""
-        body = (top("Yuklar", "Xarita: furalar va oxirgi 24 soatdagi aktiv yuklar")
+        body = (top("Грузы", "Карта: фуры и активные грузы за последние 24 часа")
                 + _cargo_tabs("/map") + legend + '<div id="map"></div>' + MAP_JS)
-        return page("Xarita", body, active="/map", head=libs)
+        return page("Карта", body, active="/map", head=libs)
 
     @app.get("/api/map")
     async def map_data():
@@ -1885,12 +1905,12 @@ def create_app() -> FastAPI:
         report = analytics.report(days=days)
         t = report["totals"]
 
-        tiles = [("box", "Yuklar", t["cargos"], f"{days} kunda"),
-                 ("check", "Olingan", t["taken"], "reys"),
-                 ("clock", "Eskirgan", t["expired"], "javobsiz qolgan"),
-                 ("bell", "Bildirishnoma", t["notified"], f"{t['matches']} moslikdan"),
-                 ("money", "O'rtacha marja", money(t["avg_taken_margin"]),
-                  "olingan reyslarda")]
+        tiles = [("box", "Грузы", t["cargos"], f"за {days} дн."),
+                 ("check", "Взято", t["taken"], "рейсов"),
+                 ("clock", "Устарело", t["expired"], "без ответа"),
+                 ("bell", "Уведомления", t["notified"], f"из {t['matches']} совпадений"),
+                 ("money", "Средняя маржа", money(t["avg_taken_margin"]),
+                  "по взятым рейсам")]
         stats = '<div class="stats">' + "".join(
             f'<div class="stat"><div class="k">{ic(name, 14)} {label}</div>'
             f'<div class="v">{value}</div><small>{note}</small></div>'
@@ -1902,57 +1922,57 @@ def create_app() -> FastAPI:
   <td class="r">{g['take_rate']}%</td>
   <td class="r">{g['avg_score'] if g['avg_score'] is not None else '—'}</td>
 </tr>""" for g in report["groups"])
-        groups_table = f"""<h2>{ic("satellite", 14)} Guruhlar</h2>
+        groups_table = f"""<h2>{ic("satellite", 14)} Группы</h2>
 <div class="table-wrap"><table>
-<thead><tr><th>Guruh</th><th>Yuklar</th><th>Olingan</th><th>Tashlangan</th>
-<th style="text-align:right">Olish ulushi</th>
-<th style="text-align:right">O'rt. ball</th></tr></thead>
-<tbody>{groups or _empty("Hali ma'lumot yo'q", "inbox", colspan=6)}</tbody>
+<thead><tr><th>Группа</th><th>Грузы</th><th>Взято</th><th>Пропущено</th>
+<th style="text-align:right">Доля взятых</th>
+<th style="text-align:right">Ср. балл</th></tr></thead>
+<tbody>{groups or _empty("Пока нет данных", "inbox", colspan=6)}</tbody>
 </table></div>
-<p class="muted">Olish ulushi past guruhni kuzatishdan to'xtatish mumkin —
-<code>sources.json</code> dan olib tashlang.</p>"""
+<p class="muted">Группу с низкой долей взятых можно перестать отслеживать —
+удалите её из <code>sources.json</code>.</p>"""
 
-        few = '<span class="muted">ma\'lumot kam</span>'
+        few = '<span class="muted">мало данных</span>'
         route_rows = []
         for r in report["routes"]:
-            per_km = f"{r['rate_per_km']:.2f} $/km" if r["rate_per_km"] else few
-            km = f"{r['km']:.0f} km" if r["km"] else "—"
+            per_km = f"{r['rate_per_km']:.2f} $/км" if r["rate_per_km"] else few
+            km = f"{r['km']:.0f} км" if r["km"] else "—"
             route_rows.append(f"""<tr>
-  <td><b>{e(r['from_city'])} → {e(r['to_city'])}</b></td>
+  <td><b>{ru(r['from_city'])} → {ru(r['to_city'])}</b></td>
   <td class="num">{r['count']}</td>
   <td class="num">{km}</td>
   <td class="r">{money(r['avg_rate_usd'])}</td>
   <td class="r">{per_km}</td>
 </tr>""")
         routes = "".join(route_rows)
-        routes_table = f"""<h2>{ic("route", 14)} Yo'nalishlar</h2>
+        routes_table = f"""<h2>{ic("route", 14)} Направления</h2>
 <div class="table-wrap"><table>
-<thead><tr><th>Yo'nalish</th><th>E'lonlar</th><th>Masofa</th>
-<th style="text-align:right">O'rt. stavka</th>
-<th style="text-align:right">Bozor $/km</th></tr></thead>
-<tbody>{routes or _empty("Hali ma'lumot yo'q", "inbox", colspan=5)}</tbody>
+<thead><tr><th>Направление</th><th>Объявления</th><th>Расстояние</th>
+<th style="text-align:right">Ср. ставка</th>
+<th style="text-align:right">Рынок $/км</th></tr></thead>
+<tbody>{routes or _empty("Пока нет данных", "inbox", colspan=5)}</tbody>
 </table></div>
-<p class="muted">Yo'nalishda 3 tadan ko'p e'lon yig'ilsa, ball hisobida
-shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
+<p class="muted">Когда по направлению набирается больше 3 объявлений, в расчёте
+балла используется его собственная ставка.</p>"""
 
         s, m = report["score"], report["margin"]
         verdicts = f"""<div class="stats">
-  <div class="stat"><div class="k">{ic("chart", 14)} Ball to'g'rimi</div>
+  <div class="stat"><div class="k">{ic("chart", 14)} Верен ли балл</div>
     <div style="margin-top:6px">{e(s['verdict'])}</div>
-    <small>olingan {s['taken']['avg_score'] if s['taken'] else '—'} ·
-      tashlangan {s['skipped']['avg_score'] if s['skipped'] else '—'}</small></div>
-  <div class="stat"><div class="k">{ic("money", 14)} Prognoz aniqligi</div>
+    <small>взятые {s['taken']['avg_score'] if s['taken'] else '—'} ·
+      пропущенные {s['skipped']['avg_score'] if s['skipped'] else '—'}</small></div>
+  <div class="stat"><div class="k">{ic("money", 14)} Точность прогноза</div>
     <div style="margin-top:6px">{e(m['verdict'])}</div>
-    <small>{m['n']} ta reys bo'yicha</small></div>
+    <small>по {m['n']} {plural(m['n'], 'рейсу', 'рейсам', 'рейсам')}</small></div>
 </div>"""
 
         picker = '<div class="seg">' + "".join(
-            f'<a class="{"on" if d == days else ""}" href="/stats?days={d}">{d} kun</a>'
+            f'<a class="{"on" if d == days else ""}" href="/stats?days={d}">{d} дн.</a>'
             for d in (7, 30, 90)) + "</div>"
-        return page("Statistika",
-                    top("Statistika", back=BACK_MORE, subtitle=
-                         "Qaysi guruh foydali, ball to'g'ri ishlayaptimi, "
-                         "prognoz haqiqatga mos keladimi")
+        return page("Статистика",
+                    top("Статистика", back=BACK_MORE, subtitle=
+                         "Какие группы полезны, верно ли работает балл, "
+                         "сбывается ли прогноз")
                     + f'<div style="margin:-8px 0 20px">{picker}</div>'
                     + stats + verdicts + groups_table + routes_table, active="/stats")
 
@@ -1960,29 +1980,29 @@ shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
 
     @app.get("/truck/{truck_id}")
     async def truck_page(truck_id: str, saved: str = ""):
-        note = _note("ok", "Saqlandi") if saved else ""
+        note = _note("ok", "Сохранено") if saved else ""
         return _truck_page(truck_id, note=note)
 
     # ---------------------------------------------------------- tarix
 
     @app.get("/history")
     async def history(saved: str = "", error: str = ""):
-        notes = (_note("ok", "Saqlandi") if saved else "") + \
+        notes = (_note("ok", "Сохранено") if saved else "") + \
             (_note("err", e(error)) if error else "")
         active_trips = db.active_trips()
         done = db.finished_trips(days=180)
 
         on_road = "".join(_trip_block(t, show_truck=True) for t in active_trips)
         road_html = (f'<div class="card tcard">{on_road}</div>' if on_road else
-                     '<div class="muted" style="margin:0 4px">Hozir yo\'lda reys yo\'q.</div>')
+                     '<div class="muted" style="margin:0 4px">Сейчас рейсов в пути нет.</div>')
 
         rows = []
         for r in done:
             actual_v = r["actual_margin_usd"]
             if actual_v is None:
                 result = (f'<form method="post" action="/match/{r["id"]}/actual" class="inline">'
-                          f'<input name="margin" type="number" step="1" placeholder="haqiqiy $"'
-                          f' style="width:110px" aria-label="Haqiqiy marja">'
+                          f'<input name="margin" type="number" step="1" placeholder="факт $"'
+                          f' style="width:110px" aria-label="Фактическая маржа">'
                           f'<button class="btn sm" style="margin-left:6px">OK</button></form>')
             else:
                 pct = ""
@@ -1993,19 +2013,19 @@ shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
                 result = f'<span class="money">{money(actual_v)}</span>{pct}'
             rows.append(f"""<div class="li">
   <span class="tnum">№{e(r['truck_id'])}</span>
-  <div class="main"><a class="t route" href="/cargo/{r['cargo_id']}">{e(r['from_city'])} → {e(r['to_city'])}</a>
-  <div class="s">tugadi {e((r['finished_at'] or '')[:10])} · prognoz {money(r['margin_usd'])}</div></div>
+  <div class="main"><a class="t route" href="/cargo/{r['cargo_id']}">{ru(r['from_city'])} → {ru(r['to_city'])}</a>
+  <div class="s">завершён {e((r['finished_at'] or '')[:10])} · прогноз {money(r['margin_usd'])}</div></div>
   <span class="end">{result}</span></div>""")
         done_html = (f'<div class="list">{"".join(rows)}</div>' if rows else
-                     _empty("Hali olingan reys yo'q. Kartochkadagi «Olaman» "
-                            "tugmasi bosilgach shu yerda ko'rinadi.", "receipt"))
-        return page("Reyslar",
-                    top("Reyslar", "Yo'ldagi va tugagan reyslar")
+                     _empty("Взятых рейсов пока нет. Они появятся здесь после "
+                            "нажатия «Беру» на карточке.", "receipt"))
+        return page("Рейсы",
+                    top("Рейсы", "В пути и завершённые")
                     + _park_tabs("/history") + notes
-                    + f'<h2 class="sec"><span>{anim("truck", 22)} Yo\'lda</span> <small>{len(active_trips)} ta</small></h2>'
+                    + f'<h2 class="sec"><span>{anim("truck", 22)} В пути</span> <small>{len(active_trips)}</small></h2>'
                     + road_html
-                    + f'<h2 class="sec"><span>{anim("flag", 22)} Tugagan</span> <small>haqiqiy marjani kiriting — prognoz '
-                      'shunga qarab to\'g\'rilanadi</small></h2>'
+                    + f'<h2 class="sec"><span>{anim("flag", 22)} Завершённые</span> <small>введите фактическую маржу — '
+                      'по ней уточняется прогноз</small></h2>'
                     + done_html, active="/history")
 
     @app.post("/trip/{match_id}/finish")
@@ -2028,20 +2048,20 @@ shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
             await run_in_threadpool(pipeline.rematch_all, 48, [m["truck_id"]])
         elif status == "not_latest":
             return _redirect("/history?" + urlencode(
-                {"error": "Avval shu furaning keyingi reysini bekor qiling"}))
+                {"error": "Сначала отмените следующий рейс этой фуры"}))
         return _redirect(_back(request, "/history"))
 
     # ---------------------------------------------------------- sozlamalar
 
     @app.get("/settings")
     async def settings_page(saved: str = ""):
-        note = _note("ok", "Saqlandi. Yangi qiymatlar 30 soniya ichida hamma "
-                           "jarayonlarda ishlaydi — qayta ishga tushirish shart emas.") \
+        note = _note("ok", "Сохранено. Новые значения применятся во всех процессах "
+                           "в течение 30 секунд — перезапуск не нужен.") \
             if saved else ""
-        return page("Sozlamalar",
-                    top("Sozlamalar", back=BACK_MORE, subtitle=
-                        "Marja va ball hisobining asosi. O'zgarish 30 soniyada "
-                        "hamma jarayonlarga yetib boradi")
+        return page("Настройки",
+                    top("Настройки", back=BACK_MORE, subtitle=
+                        "Основа расчёта маржи и балла. Изменения доходят "
+                        "до всех процессов за 30 секунд")
                     + note + _settings_form(), active="/settings")
 
     @app.post("/settings")
@@ -2049,8 +2069,8 @@ shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
         form = await _form(request)
         errors = settings.save(form)
         if errors:
-            return page("Sozlamalar",
-                        top("Sozlamalar", back=BACK_MORE) + _note("err", "<br>".join(
+            return page("Настройки",
+                        top("Настройки", back=BACK_MORE) + _note("err", "<br>".join(
                             e(v) for v in errors.values())) + _settings_form(form),
                         active="/settings", status_code=400)
         return _redirect("/settings?saved=1")
@@ -2066,8 +2086,8 @@ shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
     async def chat_page():
         import brain
         note = "" if brain.enabled() else _note(
-            "info", "AI ulanmagan — <code>.env</code> ga <code>MISTRAL_API_KEY</code> "
-                    "yoki <code>GROQ_API_KEY</code> yozing. Hozircha oddiy qidiruv ishlaydi.")
+            "info", "AI не подключён — укажите в <code>.env</code> <code>MISTRAL_API_KEY</code> "
+                    "или <code>GROQ_API_KEY</code>. Пока работает обычный поиск.")
         history = "".join(
             (f'<div class="bubble ai fade">'
              f'{_merge_offers(h["content"], _history_offer_ids(h["content"]))}</div>')
@@ -2081,20 +2101,20 @@ shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
             f'<button type="button" class="chip" onclick="baxtAsk(this.textContent)">'
             f'{e(t)}</button>' for t in CHAT_SUGGESTIONS)
         new_btn = (f'<form method="post" action="/chat/new" class="inline">'
-                   f'<button class="btn sm" title="Suhbatni yangidan boshlash">'
-                   f'{ic("refresh", 14)} Yangi</button></form>')
-        body = f"""{top(f"AI yordamchi{anim('robot', 34)}", "Oddiy gap bilan yozing", right=new_btn)}{note}
+                   f'<button class="btn sm" title="Начать разговор заново">'
+                   f'{ic("refresh", 14)} Новый</button></form>')
+        body = f"""{top(f"AI-помощник{anim('robot', 34)}", "Пишите обычными словами", right=new_btn)}{note}
 <div class="chat" id="thread">{history}</div>
 <div class="bubble ai typing" id="typing"><i></i><i></i><i></i></div>
 <div class="dock"><div class="chips scroll">{chips}</div>
 <form class="composer" id="composer" method="post" action="/chat/send"
   hx-post="/chat/send" hx-target="#thread" hx-swap="beforeend" hx-indicator="#typing"
   hx-on::before-request="baxtEcho()" hx-on::after-request="this.reset();baxtScroll()">
-  <textarea name="text" rows="1" placeholder="Savol yoki topshiriq yozing…"
+  <textarea name="text" rows="1" placeholder="Напишите вопрос или задачу…"
     required onkeydown="baxtKey(event,this)" oninput="baxtGrow(this)"></textarea>
-  <button class="btn primary" title="Yuborish" aria-label="Yuborish">{ic("send", 20)}</button>
+  <button class="btn primary" title="Отправить" aria-label="Отправить">{ic("send", 20)}</button>
 </form></div>{CHAT_JS}"""
-        return page("AI yordamchi", body, active="/chat")
+        return page("AI-помощник", body, active="/chat")
 
     @app.post("/chat/send")
     async def chat_send(request: Request):
@@ -2133,30 +2153,30 @@ shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
                     f'<div class="main"><span class="t">{label}</span></div>'
                     f'<span class="end">{badge}{ic("chevron", 16, "chev")}</span></a>')
 
-        groups = [("Tahlil", MORE[:1]), ("AI va kuzatuv", MORE[1:3]), ("Tizim", MORE[3:])]
-        body = top("Ko'proq")
+        groups = [("Анализ", MORE[:1]), ("AI и отслеживание", MORE[1:3]), ("Система", MORE[3:])]
+        body = top("Ещё")
         for title, items in groups:
             extra = ""
-            if title == "Tizim":
+            if title == "Система":
                 extra = (f'<button class="li" onclick="baxtTheme()"><span class="badge em-badge">'
                          f'{anim("sun", 30)}</span><div class="main">'
-                         f'<span class="t">Yorug\' / qorong\'i rejim</span></div></button>'
+                         f'<span class="t">Светлая / тёмная тема</span></div></button>'
                          f'<form method="post" action="/logout"><button class="li red">'
                          f'<span class="badge em-badge">{anim("wave", 30)}'
-                         f'</span><div class="main"><span class="t">Chiqish</span></div>'
+                         f'</span><div class="main"><span class="t">Выйти</span></div>'
                          f'</button></form>')
             body += (f'<h2 class="sec">{title}</h2><div class="list">'
                      + "".join(row(*item) for item in items) + extra + "</div>")
-        body += '<div class="foot-note">BAXT TRANSPORT · dispetcher paneli</div>'
-        return page("Ko'proq", body, active="/more")
+        body += '<div class="foot-note">BAXT TRANSPORT · панель диспетчера</div>'
+        return page("Ещё", body, active="/more")
 
     @app.get("/watches")
     async def watches_page():
         block = _watch_block() or _empty(
-            "Kuzatuv yo'q. Yuklar → Qidiruv da yo'nalishni qidiring va "
-            "«xabar bering» tugmasini bosing.", "bell")
-        return page("Kuzatuvlar",
-                    top("Kuzatuvlar", "Shunday yuk chiqsa — Telegramga darhol xabar",
+            "Отслеживаний нет. Найдите направление в Грузы → Поиск и "
+            "нажмите «Сообщить, когда появится такой груз».", "bell")
+        return page("Отслеживание",
+                    top("Отслеживание", "Как только появится такой груз — сразу сообщение в Telegram",
                         back=BACK_MORE) + block, active="/watches")
 
     # ---------------------------------------------------------- qoidalar
@@ -2164,8 +2184,8 @@ shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
     @app.get("/rules")
     async def rules_page(msg: str = "", err: str = ""):
         note = (_note("ok", e(msg)) if msg else "") + (_note("err", e(err)) if err else "")
-        return page("Qoidalar", top("Qoidalar", "Kompaniya didi: har bir yuk hisobida "
-                                                "avtomatik qo'llanadi", back=BACK_MORE)
+        return page("Правила", top("Правила", "Правила компании: автоматически применяются "
+                                              "к расчёту каждого груза", back=BACK_MORE)
                     + note + _rules_block(), active="/rules")
 
     @app.post("/rules")
@@ -2181,7 +2201,7 @@ shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
                                 text="")
         if "error" in out:
             return _redirect("/rules?" + urlencode({"err": out["error"]}))
-        return _redirect("/rules?" + urlencode({"msg": f"Qoida #{out['rule_id']} qo'shildi"}))
+        return _redirect("/rules?" + urlencode({"msg": f"Правило #{out['rule_id']} добавлено"}))
 
     @app.post("/rules/{rule_id}/status")
     async def rules_status(rule_id: int, request: Request):
@@ -2198,8 +2218,8 @@ shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
     async def rules_learn():
         import learn
         items = learn.propose()
-        msg = (f"{len(items)} ta yangi taklif — pastda tasdiqlang" if items
-               else "Yangi naqsh topilmadi — ko'proq «Olaman/O'tkazish» qarori kerak")
+        msg = (f"Новых предложений: {len(items)} — подтвердите ниже" if items
+               else "Новых закономерностей нет — нужно больше решений «Беру/Пропустить»")
         return _redirect("/rules?" + urlencode({"msg": msg}))
 
     @app.post("/memory/{memory_id}/delete")
@@ -2216,8 +2236,8 @@ def _fleet_cards() -> str:
     """Park kartochkalari (bosh sahifa va jonli yangilanish uchun bir xil)."""
     trucks = db.get_trucks(active_only=False)
     if not trucks:
-        return _note("info", "Park bo'sh — <code>python main.py init</code> "
-                             "bilan trucks.json ni yuklang.")
+        return _note("info", "Парк пуст — загрузите trucks.json командой "
+                             "<code>python main.py init</code>.")
     return "".join(
         _truck_card(t, _best_offers(t["id"], 2) if t["active"] else [],
                     db.active_trips(t["id"]))
@@ -2229,13 +2249,13 @@ def _search_results(found: dict, text: str) -> str:
     query = found["query"]
     if not found["results"]:
         history = found["history"]
-        hint = (f"Oxirgi 7 kunda bunday yuk <b>{history}</b> marta chiqqan — "
-                f"yo'nalish tirik, kutish mantiqiy."
+        hint = (f"За последние 7 дней такой груз появлялся <b>{history}</b> раз — "
+                f"направление живое, есть смысл подождать."
                 if history else
-                "Oxirgi 7 kunda ham bunday yuk bo'lmagan.")
+                "За последние 7 дней таких грузов тоже не было.")
         if not found["trucks"]:
-            hint += " Diqqat: faol fura yo'q."
-        return (_empty(f"<b>{e(query.describe())}</b> — hozir mos yuk yo'q.<br>"
+            hint += " Внимание: нет активных фур."
+        return (_empty(f"<b>{e(query.describe())}</b> — сейчас подходящих грузов нет.<br>"
                        f"<span class='muted'>{hint}</span><br><br>"
                        + _watch_button(text), "search"))
 
@@ -2244,15 +2264,15 @@ def _search_results(found: dict, text: str) -> str:
         c = r["cargo"]
         match = db.find_match(c["id"], r["truck_id"])
         actions = (_decision_buttons(match["id"]) if match
-                   else f'<a class="btn sm" href="/cargo/{c["id"]}">Ko\'rish</a>')
-        meta = (f'<span class="tnum">№{e(r["truck_id"])}</span> · bo\'sh {r["empty_km"]:.0f} km · '
-                f'marja {money(r["margin_usd"])} · {e(_day_text(c.get("load_date")))}'
+                   else f'<a class="btn sm" href="/cargo/{c["id"]}">Смотреть</a>')
+        meta = (f'<span class="tnum">№{e(r["truck_id"])}</span> · пустой {r["empty_km"]:.0f} км · '
+                f'маржа {money(r["margin_usd"])} · {e(_day_text(c.get("load_date")))}'
                 f'<br>{_cargo_line(c)}')
         deals.append(_deal(match["id"] if match else f"c{c['id']}", c["id"],
                            c["from_city"], c["to_city"], None, meta, actions,
                            right=_price_big(c)))
-    return f"""<h2 class="sec">Topildi: {len(deals)} ta
-<small>eng foydalisi yuqorida · {found['scanned']} yukdan, {found['trucks']} fura</small></h2>
+    return f"""<h2 class="sec">Найдено: {len(deals)}
+<small>самые выгодные сверху · из {found['scanned']} грузов, фур: {found['trucks']}</small></h2>
 <div class="list">{''.join(deals)}</div>
 <p>{_watch_button(text)}</p>"""
 
@@ -2260,7 +2280,7 @@ def _search_results(found: dict, text: str) -> str:
 def _watch_button(text: str) -> str:
     return (f'<form method="post" action="/watch" class="inline">'
             f'<input type="hidden" name="q" value="{e(text)}">'
-            f'<button class="btn">{ic("bell", 15)} Shunday yuk chiqsa — xabar bering'
+            f'<button class="btn">{ic("bell", 15)} Сообщить, когда появится такой груз'
             f'</button></form>')
 
 
@@ -2271,7 +2291,7 @@ def _watch_block() -> str:
         return ""
     items = []
     for w in watches:
-        route = " → ".join(x for x in (w["from_city"], w["to_city"]) if x) or "—"
+        route = " → ".join(geo.ru(x) for x in (w["from_city"], w["to_city"]) if x) or "—"
         body = f" · {BODY.get(w['body_type'], w['body_type'])}" if w["body_type"] else ""
         items.append(f"""<tr>
   <td><b>{e(route)}</b>{e(body)}</td>
@@ -2279,19 +2299,19 @@ def _watch_block() -> str:
   <td class="muted">{e((w['expires_at'] or '')[:10])}</td>
   <td style="text-align:right">
     <form method="post" action="/watch/{w['id']}/delete" class="inline">
-      <button class="btn sm danger" title="O'chirish">{ic("trash", 15)}</button>
+      <button class="btn sm danger" title="Удалить">{ic("trash", 15)}</button>
     </form></td>
 </tr>""")
-    return f"""<h2>{ic("bell", 14)} Kuzatuvdagi yo'nalishlar</h2>
+    return f"""<h2>{ic("bell", 14)} Отслеживаемые направления</h2>
 <div class="table-wrap"><table>
-<thead><tr><th>Yo'nalish</th><th>Topildi</th><th>Muddati</th><th></th></tr></thead>
+<thead><tr><th>Направление</th><th>Найдено</th><th>До</th><th></th></tr></thead>
 <tbody>{''.join(items)}</tbody></table></div>
-<p class="muted">Shunday yuk chiqsa, ball chegarasidan qat'i nazar Telegramga
-xabar boradi. Muddati tugagach o'zi o'chadi.</p>"""
+<p class="muted">Когда появится такой груз, сообщение придёт в Telegram независимо
+от порога балла. По истечении срока отслеживание отключится само.</p>"""
 
 
 def _city_datalist() -> str:
-    options = "".join(f'<option value="{e(name)}">' for name in sorted(geo.CITIES))
+    options = "".join(f'<option value="{e(name)}">' for name in sorted(geo.RU.values()))
     return f'<datalist id="cities">{options}</datalist>'
 
 
@@ -2305,26 +2325,26 @@ def _return_block(cargo, matches) -> str:
         return ""
     best = scoring.best_cargos(truck, db.active_cargos(hours=48), top=5)
     if not best:
-        return (f"<h2>Qaytish yuki</h2>" + _note(
-            "info", f"{e(cargo['to_city'])}dan mos yuk hozircha yo'q. "
-                    f"Yangi e'lonlar kelganda bot o'zi xabar beradi."))
+        return (f"<h2>Обратный груз</h2>" + _note(
+            "info", f"Из г. {ru(cargo['to_city'])} подходящих грузов пока нет. "
+                    f"Когда появятся новые объявления, бот сообщит сам."))
     lines = []
     for r in best:
         back = db.get_cargo(r["cargo_id"])
         lines.append(f"""<tr>
   <td>{_ring(r['score'], small=True)}</td>
-  <td><a class="route" href="/cargo/{back['id']}">{e(back['from_city'])} → {e(back['to_city'])}</a></td>
-  <td class="num">{r['empty_km']} km</td>
+  <td><a class="route" href="/cargo/{back['id']}">{ru(back['from_city'])} → {ru(back['to_city'])}</a></td>
+  <td class="num">{r['empty_km']} км</td>
   <td class="r"><span class="money plus">{money(r['margin_usd'])}</span></td>
   <td class="r">{e(_price_short(back) or '—')}</td>
   <td>{e(back['load_date'] or '—')}</td>
 </tr>""")
-    return f"""<h2>Qaytish yuki · mashina №{e(truck['id'])} · {e(truck['current_city'])}dan
-(bo'shaydi {e(truck['free_date'])})</h2>
+    return f"""<h2>Обратный груз · фура №{e(truck['id'])} · из г. {ru(truck['current_city'])}
+(освободится {e(_day_text(truck['free_date']))})</h2>
 <div class="table-wrap"><table>
-<thead><tr><th>Ball</th><th>Yo'nalish</th><th>Bo'sh</th>
-<th style="text-align:right">Marja</th><th style="text-align:right">Narx</th>
-<th>Yuklash</th></tr></thead>
+<thead><tr><th>Балл</th><th>Направление</th><th>Пустой</th>
+<th style="text-align:right">Маржа</th><th style="text-align:right">Цена</th>
+<th>Погрузка</th></tr></thead>
 <tbody>{''.join(lines)}</tbody></table></div>"""
 
 
@@ -2334,37 +2354,37 @@ def _truck_form(t) -> str:
                    f'{d or "—"}</option>' for d in DIRECTIONS)
     return f"""<form method="post" action="/trucks/{e(t['id'])}">
   <div class="row">
-    <div class="field"><label>Hozir qayerda</label>
-      <input name="current_city" value="{e(t['current_city'] or '')}" list="cities"></div>
-    <div class="field"><label>Qachon bo'shaydi</label>
+    <div class="field"><label>Где сейчас</label>
+      <input name="current_city" value="{ru(t['current_city'] or '')}" list="cities"></div>
+    <div class="field"><label>Когда освободится</label>
       <input name="free_date" type="date" value="{e(t['free_date'] or '')}"></div>
   </div>
   <div class="row">
-    <div class="field"><label>Davlat raqami</label><input name="plate" value="{e(t['plate'] or '')}"></div>
-    <div class="field"><label>Haydovchi</label><input name="driver" value="{e(t['driver'] or '')}"></div>
-    <div class="field"><label>Telefon</label><input name="driver_phone" value="{e(t['driver_phone'] or '')}" inputmode="tel"></div>
+    <div class="field"><label>Госномер</label><input name="plate" value="{e(t['plate'] or '')}"></div>
+    <div class="field"><label>Водитель</label><input name="driver" value="{e(t['driver'] or '')}"></div>
+    <div class="field"><label>Телефон</label><input name="driver_phone" value="{e(t['driver_phone'] or '')}" inputmode="tel"></div>
   </div>
   <div class="row">
-    <div class="field"><label>Kuzov</label><select name="body_type">{_body_options(t['body_type'])}</select></div>
-    <div class="field"><label>Ref: eng past °C</label>
+    <div class="field"><label>Кузов</label><select name="body_type">{_body_options(t['body_type'])}</select></div>
+    <div class="field"><label>Реф: мин. °C</label>
       <input name="temp_min" value="{'' if t['temp_min'] is None else format(t['temp_min'], 'g')}" inputmode="decimal"></div>
-    <div class="field"><label>Ref: eng yuqori °C</label>
+    <div class="field"><label>Реф: макс. °C</label>
       <input name="temp_max" value="{'' if t['temp_max'] is None else format(t['temp_max'], 'g')}" inputmode="decimal"></div>
   </div>
   <div class="row">
-    <div class="field"><label>Sig'im, t</label><input name="capacity_t" value="{t['capacity_t'] or ''}" inputmode="decimal"></div>
-    <div class="field"><label>Yoqilg'i, l/100km</label><input name="fuel_l_100km" value="{t['fuel_l_100km'] or ''}" inputmode="decimal"></div>
-    <div class="field"><label>Afzal yo'nalish</label><select name="preferred_dir">{dirs}</select></div>
+    <div class="field"><label>Грузоподъёмность, т</label><input name="capacity_t" value="{t['capacity_t'] or ''}" inputmode="decimal"></div>
+    <div class="field"><label>Топливо, л/100 км</label><input name="fuel_l_100km" value="{t['fuel_l_100km'] or ''}" inputmode="decimal"></div>
+    <div class="field"><label>Направление</label><select name="preferred_dir">{dirs}</select></div>
   </div>
   <div class="field"><input type="hidden" name="active" value="0">
     <label class="switch"><input type="checkbox" name="active" value="1"
     {"checked" if t['active'] else ""}><span class="track"></span>
-    <span>Faol — takliflarda qatnashadi</span></label></div>
-  <button class="btn primary">Saqlash</button>
+    <span>Активна — участвует в предложениях</span></label></div>
+  <button class="btn primary">Сохранить</button>
 </form>{_city_datalist()}"""
 
 
-TRUCK_BODIES = [("ref", "Ref (sovutgich)"), ("tent", "Tent"), ("izoterm", "Izoterm")]
+TRUCK_BODIES = [("ref", "Реф (холодильник)"), ("tent", "Тент"), ("izoterm", "Изотерм")]
 
 
 def _parse_temps(form: dict, body: str) -> tuple[dict, list[str]]:
@@ -2372,7 +2392,7 @@ def _parse_temps(form: dict, body: str) -> tuple[dict, list[str]]:
     if body != "ref":
         return {"temp_min": None, "temp_max": None}, []
     out, errors = {}, []
-    for name, label in (("temp_min", "Eng past harorat"), ("temp_max", "Eng yuqori harorat")):
+    for name, label in (("temp_min", "Мин. температура"), ("temp_max", "Макс. температура")):
         raw = (form.get(name) or "").strip().replace(",", ".")
         try:
             value = float(raw)
@@ -2380,9 +2400,9 @@ def _parse_temps(form: dict, body: str) -> tuple[dict, list[str]]:
                 raise ValueError
             out[name] = value
         except ValueError:
-            errors.append(f"{label}: −30…30 °C oralig'ida son kiriting")
+            errors.append(f"{label}: введите число от −30 до 30 °C")
     if not errors and out["temp_min"] > out["temp_max"]:
-        errors.append("Eng past harorat eng yuqoridan katta bo'lmasin")
+        errors.append("Мин. температура не должна быть выше макс.")
     return out, errors
 
 
@@ -2397,21 +2417,21 @@ def _parse_new_truck(form: dict) -> tuple[dict, list[str]]:
     if truck_id.isdigit():
         truck_id = truck_id.zfill(2)
     if not truck_id or len(truck_id) > 8 or not truck_id.replace("-", "").isalnum():
-        errors.append("Fura raqami: masalan 07")
+        errors.append("Номер фуры: например 07")
     elif db.get_truck(truck_id) is not None:
-        errors.append(f"№{e(truck_id)} allaqachon bor")
+        errors.append(f"№{e(truck_id)} уже есть")
     body = form.get("body_type") if form.get("body_type") in BODY else None
     if body is None:
-        errors.append("Kuzov turini tanlang")
+        errors.append("Выберите тип кузова")
     temps, temp_errors = _parse_temps(form, body or "")
     errors += temp_errors
     city = geo.lookup((form.get("current_city") or "").strip()) \
         if (form.get("current_city") or "").strip() else None
     if not city:
-        errors.append("Qayerda turganini yozing (shahar)")
+        errors.append("Укажите, где стоит фура (город)")
     numbers = {}
-    for name, label, lo, hi, default in (("capacity_t", "Sig'im", 1, 40, 20),
-                                         ("fuel_l_100km", "Yoqilg'i sarfi", 10, 70, 33)):
+    for name, label, lo, hi, default in (("capacity_t", "Грузоподъёмность", 1, 40, 20),
+                                         ("fuel_l_100km", "Расход топлива", 10, 70, 33)):
         raw = (form.get(name) or "").strip().replace(",", ".")
         try:
             value = float(raw) if raw else float(default)
@@ -2419,12 +2439,12 @@ def _parse_new_truck(form: dict) -> tuple[dict, list[str]]:
                 raise ValueError
             numbers[name] = value
         except ValueError:
-            errors.append(f"{label}: {lo}–{hi} oralig'ida son")
+            errors.append(f"{label}: число от {lo} до {hi}")
     free = (form.get("free_date") or "").strip() or date.today().isoformat()
     try:
         free = date.fromisoformat(free).isoformat()
     except ValueError:
-        errors.append("Sana noto'g'ri")
+        errors.append("Неверная дата")
     truck = {"id": truck_id, "body_type": body, **temps, **numbers,
              "current_city": city, "free_date": free,
              "plate": (form.get("plate") or "").strip()[:20],
@@ -2445,42 +2465,42 @@ def _truck_new_page(form: dict | None = None, errors: list[str] | None = None) -
     note = _note("err", "<br>".join(errors)) if errors else ""
     dirs = "".join(f'<option value="{d}" {"selected" if f.get("preferred_dir") == d else ""}>'
                    f'{d or "—"}</option>' for d in DIRECTIONS)
-    return (top("Yangi fura", "Majburiy: raqam, kuzov, qayerda turgani", back=("/trucks", "Park"))
+    return (top("Новая фура", "Обязательно: номер, кузов, где стоит", back=("/trucks", "Парк"))
             + note + f"""<form class="card" method="post" action="/trucks/new">
   <div class="row">
-    <div class="field"><label>Fura raqami</label>
+    <div class="field"><label>Номер фуры</label>
       <input name="id" value="{e(f.get('id') or _next_truck_id())}" inputmode="numeric"></div>
-    <div class="field"><label>Kuzov</label>
+    <div class="field"><label>Кузов</label>
       <select name="body_type">{_body_options(f.get('body_type') or 'tent')}</select></div>
-    <div class="field"><label>Sig'im, t</label>
+    <div class="field"><label>Грузоподъёмность, т</label>
       <input name="capacity_t" value="{e(f.get('capacity_t') or '20')}" inputmode="decimal"></div>
   </div>
   <div class="row">
-    <div class="field"><label>Ref: eng past °C</label>
+    <div class="field"><label>Реф: мин. °C</label>
       <input name="temp_min" value="{e(f.get('temp_min') or '-20')}" inputmode="decimal"></div>
-    <div class="field"><label>Ref: eng yuqori °C</label>
+    <div class="field"><label>Реф: макс. °C</label>
       <input name="temp_max" value="{e(f.get('temp_max') or '15')}" inputmode="decimal"></div>
   </div>
   <div class="row">
-    <div class="field"><label>Hozir qayerda</label>
+    <div class="field"><label>Где сейчас</label>
       <input name="current_city" value="{e(f.get('current_city') or '')}" list="cities"
-        placeholder="Toshkent"></div>
-    <div class="field"><label>Qachon bo'shaydi</label>
+        placeholder="Ташкент"></div>
+    <div class="field"><label>Когда освободится</label>
       <input name="free_date" type="date" value="{e(f.get('free_date') or date.today().isoformat())}"></div>
   </div>
   <div class="row">
-    <div class="field"><label>Davlat raqami</label><input name="plate" value="{e(f.get('plate') or '')}"></div>
-    <div class="field"><label>Haydovchi</label><input name="driver" value="{e(f.get('driver') or '')}"></div>
-    <div class="field"><label>Telefon</label>
+    <div class="field"><label>Госномер</label><input name="plate" value="{e(f.get('plate') or '')}"></div>
+    <div class="field"><label>Водитель</label><input name="driver" value="{e(f.get('driver') or '')}"></div>
+    <div class="field"><label>Телефон</label>
       <input name="driver_phone" value="{e(f.get('driver_phone') or '')}" inputmode="tel"></div>
   </div>
   <div class="row">
-    <div class="field"><label>Yoqilg'i, l/100km</label>
+    <div class="field"><label>Топливо, л/100 км</label>
       <input name="fuel_l_100km" value="{e(f.get('fuel_l_100km') or '33')}" inputmode="decimal"></div>
-    <div class="field"><label>Afzal yo'nalish</label><select name="preferred_dir">{dirs}</select></div>
+    <div class="field"><label>Направление</label><select name="preferred_dir">{dirs}</select></div>
   </div>
-  <button class="btn primary">{ic("plus", 16)} Qo'shish</button>
-  <p class="muted">Qo'shilgach, bazadagi aktiv yuklar shu fura uchun ham hisoblanadi.</p>
+  <button class="btn primary">{ic("plus", 16)} Добавить</button>
+  <p class="muted">После добавления активные грузы из базы пересчитаются и для этой фуры.</p>
 </form>{_city_datalist()}""")
 
 
@@ -2488,8 +2508,8 @@ def _truck_offers(truck_id: str, n: int = 5) -> str:
     """Fura sahifasidagi takliflar bloki (o'tkazilganda shu blok yangilanadi)."""
     offers = "".join(_offer(o) for o in _best_offers(truck_id, n))
     if not offers:
-        offers = (f'<div class="empty-row" style="border-top:0"><span>{anim("eyes", 22)}Hozircha mos yuk yo\'q</span>'
-                  f'{_ask_ai_button(f"{truck_id} fura uchun yuk va qaytish yukini top")}</div>')
+        offers = (f'<div class="empty-row" style="border-top:0"><span>{anim("eyes", 22)}Пока подходящих грузов нет</span>'
+                  f'{_ask_ai_button(f"Найди груз и обратный груз для фуры {truck_id}")}</div>')
     return f'<div class="card tcard fade" id="offers-{e(truck_id)}">{offers}</div>'
 
 
@@ -2498,16 +2518,16 @@ def _truck_page(truck_id: str, note: str = "", open_edit: bool = False,
     """Fura sahifasi: holat, takliflar, tarix, tahrirlash — hammasi bir joyda."""
     truck = db.get_truck(truck_id)
     if truck is None:
-        return page("Topilmadi", _note("err", f"Mashina №{e(truck_id)} topilmadi"),
+        return page("Не найдено", _note("err", f"Фура №{e(truck_id)} не найдена"),
                     active="/trucks", status_code=404)
 
     gps_row = db.last_gps(truck_id)
     if gps_row:
         city = geo.nearest_city(gps_row["lat"], gps_row["lon"])
-        gps_txt = (f"oxirgi signal {e(ago_phrase(gps_row['recorded_at'] or gps_row['created_at']))}"
-                   f" · {e(city or 'shahar aniqlanmadi')}")
+        gps_txt = (f"последний сигнал {e(ago_phrase(gps_row['recorded_at'] or gps_row['created_at']))}"
+                   f" · {e(geo.ru(city) if city else 'город не определён')}")
     else:
-        gps_txt = "GPS signali yo'q"
+        gps_txt = "Нет сигнала GPS"
 
     body = BODY.get(truck["body_type"], truck["body_type"] or "—")
     src = POS_SOURCE.get(truck["pos_source"] or "", "")
@@ -2516,18 +2536,18 @@ def _truck_page(truck_id: str, note: str = "", open_edit: bool = False,
              if truck["driver_phone"] else "—")
     on_trip = db.active_trips(truck_id)
     state, label = _truck_state(truck, on_trip)
-    facts = [("Holat", f'<span class="tstate"><span class="dot s-{state}"></span>{e(label)}</span>'),
-             ("Hozir" if not on_trip else "Boradi",
-              f'<b>{e(truck["current_city"] or "—")}</b>{src_pill}'),
-             ("Haydovchi", e(truck["driver"] or "—")),
-             ("Telefon", phone),
-             ("Telegram", "ulangan — reyslar o'zi boradi" if truck["tg_user_id"] else
-              (f'ulanmagan · haydovchi botga yozsin: <code>/link {e(truck_id)} '
+    facts = [("Статус", f'<span class="tstate"><span class="dot s-{state}"></span>{e(label)}</span>'),
+             ("Сейчас" if not on_trip else "Едет в",
+              f'<b>{ru(truck["current_city"] or "—")}</b>{src_pill}'),
+             ("Водитель", e(truck["driver"] or "—")),
+             ("Телефон", phone),
+             ("Telegram", "подключён — рейсы приходят сами" if truck["tg_user_id"] else
+              (f'не подключён · пусть водитель напишет боту: <code>/link {e(truck_id)} '
                f'{e(truck["plate"])}</code>' if truck["plate"] else
-               "ulanmagan · avval davlat raqamini kiriting")),
+               "не подключён · сначала укажите госномер")),
              ("GPS", gps_txt),
-             ("Yoqilg'i", f'{truck["fuel_l_100km"] or 0:g} l/100km'),
-             ("Afzal yo'nalish", e(truck["preferred_dir"] or "—"))]
+             ("Топливо", f'{truck["fuel_l_100km"] or 0:g} л/100 км'),
+             ("Направление", e(truck["preferred_dir"] or "—"))]
     facts_html = '<div class="list kv">' + "".join(
         f'<div class="li"><span class="k">{k}</span><span class="v">{v}</span></div>'
         for k, v in facts) + "</div>"
@@ -2535,29 +2555,29 @@ def _truck_page(truck_id: str, note: str = "", open_edit: bool = False,
     offers = _truck_offers(truck_id)
 
     trips = "".join(f"""<a class="li" href="/cargo/{r['cargo_id']}">
-  <div class="main"><span class="t">{e(r['from_city'])} → {e(r['to_city'])}</span>
-  <div class="s">{e((r['decided_at'] or r['created_at'] or '')[:10])} · prognoz {money(r['margin_usd'])}
-  · haqiqiy {money(r['actual_margin_usd']) if r['actual_margin_usd'] is not None else '—'}</div></div>
+  <div class="main"><span class="t">{ru(r['from_city'])} → {ru(r['to_city'])}</span>
+  <div class="s">{e((r['decided_at'] or r['created_at'] or '')[:10])} · прогноз {money(r['margin_usd'])}
+  · факт {money(r['actual_margin_usd']) if r['actual_margin_usd'] is not None else '—'}</div></div>
   <span class="end">{ic("chevron", 16, "chev")}</span></a>""" for r in db.truck_history(truck_id))
 
-    plan_btn = _ask_ai_button(f"{truck_id} fura uchun yuk va qaytish yukini rejala", "Reja")
-    html = (top(f"Fura №{e(truck_id)}",
+    plan_btn = _ask_ai_button(f"Спланируй груз и обратный груз для фуры {truck_id}", "План")
+    html = (top(f"Фура №{e(truck_id)}",
                 " · ".join(x for x in (e(truck["plate"] or ""),
-                                       f"{e(body)} {truck['capacity_t'] or 0:g} t") if x),
-                back=("/trucks", "Park"), right=plan_btn)
+                                       f"{e(body)} {truck['capacity_t'] or 0:g} т") if x),
+                back=("/trucks", "Парк"), right=plan_btn)
             + note + facts_html
-            + ('<h2 class="sec">Hozirgi reys</h2><div class="card tcard">'
+            + ('<h2 class="sec">Текущий рейс</h2><div class="card tcard">'
                + "".join(_trip_block(t) for t in on_trip) + '</div>' if on_trip else '')
-            + f'<h2 class="sec">{"Keyingi yuk" if on_trip else "Takliflar"} '
-              f'<small>eng foydalisi yuqorida</small></h2>'
+            + f'<h2 class="sec">{"Следующий груз" if on_trip else "Предложения"} '
+              f'<small>самые выгодные сверху</small></h2>'
             + offers
-            + '<h2 class="sec">Reyslar tarixi</h2>'
-            + (f'<div class="list">{trips}</div>' if trips else _empty("Hali reys yo'q", "receipt"))
-            + '<h2 class="sec">Tahrirlash</h2>'
+            + '<h2 class="sec">История рейсов</h2>'
+            + (f'<div class="list">{trips}</div>' if trips else _empty("Рейсов пока нет", "receipt"))
+            + '<h2 class="sec">Редактирование</h2>'
             + f'<details class="card"{" open" if open_edit else ""}><summary>'
-              f'Joylashuv, haydovchi, sig\'im {ic("chevron", 16, "chev")}</summary>'
+              f'Местоположение, водитель, грузоподъёмность {ic("chevron", 16, "chev")}</summary>'
             + _truck_form(truck) + "</details>")
-    return page(f"Mashina №{truck_id}", html, active="/trucks", status_code=status_code)
+    return page(f"Фура №{truck_id}", html, active="/trucks", status_code=status_code)
 
 
 def _settings_form(raw: dict | None = None) -> str:
@@ -2570,33 +2590,33 @@ def _settings_form(raw: dict | None = None) -> str:
                    "briefing_hour": settings.BRIEFING_HOUR_DEFAULT}.get(name)
         if default is None:
             default = getattr(config.COSTS, name)
-        mark = ' <span class="pill">o\'zgartirilgan</span>' if name in overridden else ""
+        mark = ' <span class="pill">изменено</span>' if name in overridden else ""
         rows.append(f"""<tr><td>{e(label)}{mark}</td>
   <td><input name="{name}" value="{e(value)}" inputmode="decimal" style="width:110px"></td>
   <td class="muted">{e(unit)}</td><td class="muted num">{default:g}</td>
   <td class="muted num">{lo:g}–{hi:g}</td></tr>""")
     return f"""<form method="post" action="/settings"><div class="table-wrap"><table>
-<thead><tr><th>Parametr</th><th>Qiymat</th><th>Birlik</th><th>Boshlang'ich</th>
-<th>Chegara</th></tr></thead>
+<thead><tr><th>Параметр</th><th>Значение</th><th>Ед.</th><th>По умолчанию</th>
+<th>Диапазон</th></tr></thead>
 <tbody>{''.join(rows)}</tbody></table></div>
 <p style="display:flex;gap:10px;align-items:center">
-<button class="btn primary">Saqlash</button>
-<span class="muted">Boshlang'ich qiymatlar <code>config.py</code> da — u o'zgarmaydi.</span>
+<button class="btn primary">Сохранить</button>
+<span class="muted">Значения по умолчанию — в <code>config.py</code>, он не меняется.</span>
 </p></form>
 <form method="post" action="/settings/reset"
-  onsubmit="return confirm('Hamma qiymatlar boshlang\\'ich holatga qaytadi. Davom etamizmi?')">
-<button class="btn danger">Boshlang'ich qiymatlarga qaytarish</button></form>"""
+  onsubmit="return confirm('Все значения вернутся к исходным. Продолжить?')">
+<button class="btn danger">Вернуть значения по умолчанию</button></form>"""
 
 
 # ---------------------------------------------------------------- AI suhbat
 
 WEB_CHAT_ID = "web"
-CHAT_WELCOME = ("Assalomu alaykum! Men BAXT dispetcher yordamchisiman.\n\n"
-                "Yozing, masalan:\n• 01 Moskvada, atrofidan yaxshi yuk top\n"
-                "• Rossiyadan 30 mln dan arzon yuk olmagin — qoida qilib eslab qolaman\n"
-                "• Har furaga yuk va qaytish yukini rejalab ber")
-CHAT_SUGGESTIONS = ["Har furaga yuk + qaytish rejasi", "Park holati",
-                    "Bugungi eng foydali yuklar", "Qoidalarimiz qanaqa?"]
+CHAT_WELCOME = ("Здравствуйте! Я AI-помощник диспетчера BAXT.\n\n"
+                "Напишите, например:\n• 01 в Москве, найди хороший груз рядом\n"
+                "• Не бери груз из России дешевле 30 млн — запомню как правило\n"
+                "• Спланируй груз и обратный груз для каждой фуры")
+CHAT_SUGGESTIONS = ["План: груз + обратный для каждой фуры", "Состояние парка",
+                    "Самые выгодные грузы сегодня", "Какие у нас правила?"]
 CHAT_JS = """<script>
 function baxtScroll(){var t=document.getElementById('thread');
  var last=t.lastElementChild; if(last)last.scrollIntoView({block:'end',behavior:'smooth'});}
@@ -2699,8 +2719,8 @@ def _chat_answer(text: str) -> str:
         # AI yo'q yoki ishlamadi — oddiy qidiruv (bot bilan bir xil manba)
         query = search.parse_query(text)
         if query.is_empty:
-            return _bubble("assistant", "AI hozir javob bera olmadi. Shahar nomlari bilan "
-                                        "yozib ko'ring: Toshkent Moskva")
+            return _bubble("assistant", "AI сейчас не смог ответить. Попробуйте написать "
+                                        "города: Ташкент Москва")
         return f'<div class="bubble ai fade">{_search_results(search.find(query), text)}</div>'
     ids = [int(row[0]["callback_data"].split(":")[1])
            for row in (res.keyboard or {}).get("inline_keyboard", [])
@@ -2717,17 +2737,17 @@ def _ai_offer(match_id: int) -> str:
         return ""
     price = _price_short(c)
     price_txt = (f'<span class="money plus">{e(price)}</span>' if price
-                 else "narx yozilmagan")
-    margin = f" · marja {money(m['margin_usd'])}" if m["margin_usd"] is not None else ""
+                 else "цена не указана")
+    margin = f" · маржа {money(m['margin_usd'])}" if m["margin_usd"] is not None else ""
     d = _details(m)
     body = BODY.get(c["body_type"], c["body_type"] or "")
-    load = " ".join(x for x in (f"{c['weight_t']:g} t" if c["weight_t"] else "", body) if x)
+    load = " ".join(x for x in (f"{c['weight_t']:g} т" if c["weight_t"] else "", body) if x)
     facts = " · ".join(x for x in (
-        load, f"bo'sh {m['empty_km']:.0f} km" if m["empty_km"] is not None else "",
-        f"{d['trip_days']} kun" if d.get("trip_days") else "",
+        load, f"пустой {m['empty_km']:.0f} км" if m["empty_km"] is not None else "",
+        f"{d['trip_days']} дн." if d.get("trip_days") else "",
         _day_text(c["load_date"]) if c["load_date"] else "") if x)
     return f"""<div class="offer" id="m{match_id}">
-  <div class="grow"><a class="route" href="/cargo/{c['id']}">#{c['id']} {e(c['from_city'])} → {e(c['to_city'])}</a>
+  <div class="grow"><a class="route" href="/cargo/{c['id']}">#{c['id']} {ru(c['from_city'])} → {ru(c['to_city'])}</a>
   <div class="muted">{price_txt} · №{e(m['truck_id'])}{margin}</div>
   <div class="muted">{e(facts)}</div></div>
   <div class="act">{_decision_buttons(match_id)}</div>
@@ -2739,8 +2759,8 @@ _EFFECT_LOOK = {"block": ("ban", "bad"), "penalty": ("warning", "warn"), "boost"
 
 def _rule_row(r: dict, buttons: str) -> str:
     import rules
-    src = ('<span class="pill ok">o\'rganilgan</span>' if r["source"] == "learned"
-           else '<span class="pill">rahbar</span>')
+    src = ('<span class="pill ok">из решений</span>' if r["source"] == "learned"
+           else '<span class="pill">руководитель</span>')
     icon, cls = _EFFECT_LOOK.get(r["effect"], ("info", ""))
     said = f'<div class="muted">«{e(r["text"])}»</div>' if r["text"] else ""
     return f"""<div class="rule"><span class="pill {cls}">{ic(icon, 14)}</span>
@@ -2762,39 +2782,39 @@ def _rules_block() -> str:
 
     active_html = "".join(_rule_row(r, _rule_btn(r["id"], "delete", ic("trash", 15), "danger"))
                           for r in active) or _empty(
-        "Qoida yo'q. AI yordamchiga yozing: «Rossiyadan 30 mln dan arzon yuk olmagin»",
+        "Правил нет. Напишите AI-помощнику: «Не бери груз из России дешевле 30 млн»",
         "rules")
     proposed_html = "".join(
-        _rule_row(r, _rule_btn(r["id"], "active", "Qo'llash", "ok")
-                  + _rule_btn(r["id"], "rejected", "Yo'q"))
-        for r in proposed) or ('<div class="muted">Hozircha taklif yo\'q. Dastur '
-                               '«Olaman/O\'tkazish» qarorlaringizdan naqsh topsa — '
-                               'shu yerda chiqadi.</div>')
+        _rule_row(r, _rule_btn(r["id"], "active", "Применить", "ok")
+                  + _rule_btn(r["id"], "rejected", "Нет"))
+        for r in proposed) or ('<div class="muted">Предложений пока нет. Когда программа '
+                               'найдёт закономерность в ваших решениях «Беру/Пропустить», '
+                               'она появится здесь.</div>')
     learn_form = ('<form method="post" action="/rules/learn" class="inline">'
-                  f'<button class="btn sm">{ic("brain", 15)} Qarorlardan o\'rganish</button></form>')
+                  f'<button class="btn sm">{ic("brain", 15)} Учиться на решениях</button></form>')
     proposed_card = f"""<section class="card" style="margin-top:16px">
-<header><h2>O'rganilgan takliflar</h2>{learn_form}</header>{proposed_html}</section>"""
+<header><h2>Предложения из решений</h2>{learn_form}</header>{proposed_html}</section>"""
 
     countries = "".join(f'<option value="{c}">{c}</option>' for c in DIRECTIONS)
     bodies = '<option value=""></option>' + "".join(
         f'<option value="{k}">{e(v)}</option>' for k, v in BODY.items())
     currencies = "".join(f"<option>{c}</option>" for c in config.RATES_TO_USD)
-    form = f"""<section class="card" style="margin-top:16px"><header><h2>Qo'lda qoida</h2></header>
+    form = f"""<section class="card" style="margin-top:16px"><header><h2>Правило вручную</h2></header>
 <form method="post" action="/rules"><div class="row">
-<div class="field"><label>Ta'siri</label><select name="effect">
-<option value="block">Olmaymiz (to'sish)</option><option value="penalty">Yoqmaydi (−ball)</option>
-<option value="boost">Yoqadi (+ball)</option></select></div>
-<div class="field"><label>Qayerdan (davlat)</label><select name="from_country">{countries}</select></div>
-<div class="field"><label>Qayerga (davlat)</label><select name="to_country">{countries}</select></div>
-<div class="field"><label>Qayerdan (shahar)</label><input name="from_city" list="cities"></div>
-<div class="field"><label>Qayerga (shahar)</label><input name="to_city" list="cities"></div>
-<div class="field"><label>Kuzov</label><select name="body_type">{bodies}</select></div>
-<div class="field"><label>Mashina №</label><input name="truck_id"></div>
-<div class="field"><label>Eng kam stavka</label><input name="min_rate" inputmode="decimal"
+<div class="field"><label>Действие</label><select name="effect">
+<option value="block">Не берём (запрет)</option><option value="penalty">Не нравится (−балл)</option>
+<option value="boost">Нравится (+балл)</option></select></div>
+<div class="field"><label>Откуда (страна)</label><select name="from_country">{countries}</select></div>
+<div class="field"><label>Куда (страна)</label><select name="to_country">{countries}</select></div>
+<div class="field"><label>Откуда (город)</label><input name="from_city" list="cities"></div>
+<div class="field"><label>Куда (город)</label><input name="to_city" list="cities"></div>
+<div class="field"><label>Кузов</label><select name="body_type">{bodies}</select></div>
+<div class="field"><label>Фура №</label><input name="truck_id"></div>
+<div class="field"><label>Мин. ставка</label><input name="min_rate" inputmode="decimal"
   placeholder="30000000"></div>
-<div class="field"><label>Valyuta</label><select name="currency">{currencies}</select></div>
-<div class="field"><label>Ball (±)</label><input name="points" value="15"></div>
-</div><button class="btn primary">{ic("plus", 16)} Qo'shish</button></form>{_city_datalist()}
+<div class="field"><label>Валюта</label><select name="currency">{currencies}</select></div>
+<div class="field"><label>Балл (±)</label><input name="points" value="15"></div>
+</div><button class="btn primary">{ic("plus", 16)} Добавить</button></form>{_city_datalist()}
 </section>"""
 
     notes = db.memories(limit=50)
@@ -2802,36 +2822,13 @@ def _rules_block() -> str:
         f'<div class="rule"><div class="grow">{e(n["note"])}</div>'
         f'<form method="post" action="/memory/{n["id"]}/delete" class="inline">'
         f'<button class="btn sm danger">{ic("trash", 15)}</button></form></div>'
-        for n in notes) or '<div class="muted">AI hali hech narsa eslab qolmagan.</div>'
+        for n in notes) or '<div class="muted">AI пока ничего не запомнил.</div>'
     memory_card = f"""<section class="card" style="margin-top:16px">
-<header><h2>AI xotirasi</h2></header>{notes_html}</section>"""
+<header><h2>Память AI</h2></header>{notes_html}</section>"""
 
-    return (f'<section class="card"><header><h2>Amaldagi qoidalar</h2>'
-            f'<span class="pill">{len(active)} ta</span></header>{active_html}</section>'
+    return (f'<section class="card"><header><h2>Действующие правила</h2>'
+            f'<span class="pill">{len(active)}</span></header>{active_html}</section>'
             + proposed_card + form + memory_card)
-
-
-def _analytics_block() -> str:
-    try:
-        score = analytics.score_quality(days=90)
-        margin = analytics.margin_accuracy(days=180)
-        groups = [g for g in analytics.group_quality(days=30) if g["cargos"] >= 3][:5]
-    except Exception:
-        log.exception("Statistika hisoblanmadi")
-        return ""
-    parts = [f"<div class='stat'><div class='k'>🎯 Ball to'g'rimi</div>"
-             f"<div style='margin-top:6px'>{e(score['verdict'])}</div></div>",
-             f"<div class='stat'><div class='k'>💰 Prognoz aniqligi</div>"
-             f"<div style='margin-top:6px'>{e(margin['verdict'])}</div></div>"]
-    if groups:
-        items = "".join(
-            f"<div style='display:flex;justify-content:space-between;gap:10px'>"
-            f"<span>{e(g['source'])}</span>"
-            f"<span class='num muted'>{g['taken']}/{g['cargos']} · {g['take_rate']}%</span>"
-            f"</div>" for g in groups)
-        parts.append(f"<div class='stat'><div class='k'>📡 Guruhlar (olingan/jami)</div>"
-                     f"<div style='margin-top:6px'>{items}</div></div>")
-    return f"<div class='stats'>{''.join(parts)}</div>"
 
 
 def map_payload() -> dict:
@@ -2845,7 +2842,7 @@ def map_payload() -> dict:
         n = seen.get(city.name, 0)
         seen[city.name] = n + 1
         trucks_out.append({
-            "id": t["id"], "city": city.name, "lat": city.lat + n * 0.05,
+            "id": t["id"], "city": geo.ru(city.name), "lat": city.lat + n * 0.05,
             "lon": city.lon + n * 0.05, "free_date": t["free_date"],
             "body": BODY.get(t["body_type"], t["body_type"]), "active": bool(t["active"]),
         })
@@ -2857,7 +2854,7 @@ def map_payload() -> dict:
             continue
         cargos_out.append({
             "id": c["id"], "from": [a.lat, a.lon], "to": [b.lat, b.lon],
-            "label": f"{c['from_city']} → {c['to_city']}",
+            "label": f"{geo.ru(c['from_city'])} → {geo.ru(c['to_city'])}",
             "rate_usd": c["rate_usd"], "score": c["best_score"],
         })
     return {"trucks": trucks_out, "cargos": cargos_out}
@@ -2865,7 +2862,7 @@ def map_payload() -> dict:
 
 MAP_JS = """<script>
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!window.L) { document.getElementById('map').innerText = 'Xarita kutubxonasi yuklanmadi (internet?)'; return; }
+  if (!window.L) { document.getElementById('map').innerText = 'Библиотека карты не загрузилась (интернет?)'; return; }
   const map = L.map('map').setView([47, 60], 4);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     {maxZoom: 12, attribution: '&copy; OpenStreetMap'}).addTo(map);
@@ -2876,14 +2873,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     const color = c.score >= 85 ? '#15803d' : c.score >= 65 ? '#ca8a04' : '#9ca3af';
     L.polyline([c.from, c.to], {color, weight: 2, opacity: .7}).addTo(map)
       .bindPopup(`<a href="/cargo/${c.id}">#${c.id} ${esc(c.label)}</a><br>` +
-                 `${c.rate_usd ? '$' + Math.round(c.rate_usd) : 'stavka yo\\'q'}` +
-                 `${c.score != null ? ' · ball ' + Math.round(c.score) : ''}`);
+                 `${c.rate_usd ? '$' + Math.round(c.rate_usd) : 'нет ставки'}` +
+                 `${c.score != null ? ' · балл ' + Math.round(c.score) : ''}`);
     bounds.push(c.from, c.to);
   }
   for (const t of data.trucks) {
     const icon = L.divIcon({className: '', html: `<div style="background:${t.active ? '#1f6feb' : '#6b7280'};color:#fff;border-radius:8px;padding:2px 6px;font:600 12px sans-serif;white-space:nowrap">${esc(t.id)}</div>`});
     L.marker([t.lat, t.lon], {icon}).addTo(map)
-      .bindPopup(`<b>№${esc(t.id)}</b> ${esc(t.body)}<br>${esc(t.city)}<br>bo'shaydi: ${esc(t.free_date || '—')}`);
+      .bindPopup(`<b>№${esc(t.id)}</b> ${esc(t.body)}<br>${esc(t.city)}<br>освободится: ${esc(t.free_date || '—')}`);
     bounds.push([t.lat, t.lon]);
   }
   if (bounds.length) map.fitBounds(bounds, {padding: [30, 30], maxZoom: 7});

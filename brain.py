@@ -38,6 +38,7 @@ from datetime import date
 
 import ai_tools
 import db
+import geo
 import rules
 
 log = logging.getLogger("brain")
@@ -64,15 +65,19 @@ _UZ_CYRL = re.compile(r"[ЎўҚқҒғҲҳ]|\b(учун|юк|қайси|менг�
 
 
 def _script_hint(text: str) -> str:
-    """Foydalanuvchi qaysi til/alifboda yozgan — javob shunda bo'lsin."""
+    """Javob doim ruscha (buyurtmachi talabi: panel va AI to'liq ruscha).
+
+    Savol qaysi tilda yozilgani baribir aytiladi — model o'zbekcha savolni
+    tushunsin, lekin javobni ruscha yozsin (sinovda "javob tili = savol tili"
+    odati kuchli, shuning uchun har savol oldidan eslatiladi).
+    """
     cyr, lat = len(_CYRL.findall(text)), len(_LATN.findall(text))
     if cyr > lat:
-        if _UZ_CYRL.search(text):
-            return ("The owner wrote in UZBEK CYRILLIC. Answer in Uzbek using the Cyrillic "
-                    "alphabet (ўзбек кирилл: ў, қ, ғ, ҳ). City names may stay as given.")
-        return "The owner wrote in RUSSIAN. Answer in Russian."
-    return ("The owner wrote in UZBEK LATIN. Answer in Uzbek using the Latin alphabet "
-            "(o', g', sh, ch). Do not switch to Cyrillic.")
+        wrote = "UZBEK CYRILLIC" if _UZ_CYRL.search(text) else "RUSSIAN"
+    else:
+        wrote = "UZBEK LATIN"
+    return (f"The owner wrote in {wrote}. Understand it, but ANSWER IN RUSSIAN "
+            "(Cyrillic). City names in Russian: Ташкент, Москва, Казань, Самарканд.")
 TIMEOUT = 40
 
 SYSTEM = """You are the AI dispatcher of BAXT TRANSPORT, a trucking company from Uzbekistan \
@@ -107,8 +112,8 @@ to the cargo owner inside <code>…</code> so it is easy to copy.
 - Never show tool names or JSON field names to the owner.
 - Mention a rule or remembered fact ONLY if it is in the lists below. Never invent rules, \
 facts, cargos or trucks. Don't write "✅ Беру" yourself.
-- Reply in the user's language AND alphabet: Uzbek Latin -> Uzbek Latin, Uzbek Cyrillic -> \
-Uzbek Cyrillic, Russian -> Russian. Be short and \
+- ALWAYS reply in RUSSIAN, whatever language the owner writes in (Uzbek Latin, Uzbek \
+Cyrillic or Russian). City names in Russian (Ташкент, Москва, Казань). Be short and \
 practical: at most ~5 cargos, each on 2–3 lines: route, date, truck, PRICE (rate, as \
 written in the ad), empty km, margin. Do NOT show margin per day — the owner does not want it \
 (still use it to decide which cargo is best). Telegram HTML only: <b>, <i>, <code>. No markdown, no tables."""
@@ -142,7 +147,7 @@ def enabled() -> bool:
 def describe() -> str:
     ps = _providers()
     if not ps:
-        return "AI o'chirilgan (GROQ_API_KEY / MISTRAL_API_KEY yo'q)"
+        return "AI выключен (нет GROQ_API_KEY / MISTRAL_API_KEY)"
     return " → ".join(f"{p['name']}:{p['model']}" for p in ps)
 
 
@@ -347,7 +352,7 @@ def _context() -> str:
     for t in trucks:
         off = "" if t["active"] else " (inactive)"
         lines.append(f"- #{t['id']}{off} {t['body_type']} {t['capacity_t'] or 0:g}t, "
-                     f"at {t['current_city'] or '?'}, free {t['free_date'] or '?'}"
+                     f"at {geo.ru(t['current_city']) or '?'}, free {t['free_date'] or '?'}"
                      + (f", driver {t['driver']}" if t["driver"] else ""))
     if not trucks:
         lines.append("- (no trucks yet)")
@@ -419,8 +424,8 @@ def reply(chat_id, text: str, providers: list[dict] | None = None) -> Reply | No
     messages = [{"role": "system", "content": SYSTEM + "\n\n" + _context()}]
     for h in db.ai_history(chat_id, limit=HISTORY_TURNS):
         messages.append({"role": h["role"], "content": h["content"]})
-    # Alifboni dastur aniqlaydi — sinovda hamma modellar kirilldagi o'zbekcha
-    # savolga lotinda javob berdi. Aniq ko'rsatma buni tuzatadi.
+    # Javob tili — ruscha. Savol oldidan aniq eslatma: sinovda modellar
+    # savol tilida javob berishga moyil.
     messages.append({"role": "system", "content": _script_hint(text)})
     messages.append({"role": "user", "content": text.strip()[:2000]})
 
@@ -434,10 +439,6 @@ def reply(chat_id, text: str, providers: list[dict] | None = None) -> Reply | No
             continue
         if not answer:
             continue
-        if "UZBEK CYRILLIC" in _script_hint(text):
-            import translit
-            if translit.is_latin(answer):
-                answer = translit.to_cyrillic(answer)
         log.info("AI javobi (%s, %.1fs, asboblar: %s)", p["name"],
                  time.time() - started, ",".join(used) or "-")
         db.add_ai_message(chat_id, "user", text.strip()[:2000])

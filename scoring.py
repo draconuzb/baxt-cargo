@@ -66,23 +66,23 @@ def hard_checks(c: dict, t: dict, costs) -> list[str]:
     fails = []
 
     if c.get("weight_t") and t.get("capacity_t") and c["weight_t"] > t["capacity_t"] + 0.5:
-        fails.append(f"vazn {c['weight_t']}t > sig'im {t['capacity_t']}t")
+        fails.append(f"вес {c['weight_t']} т > грузоподъёмность {t['capacity_t']} т")
 
     needs_ref = c.get("temp_c") is not None or c.get("body_type") == "ref"
     if needs_ref and t.get("body_type") not in ("ref",):
-        fails.append("yuk refrijerator talab qiladi")
+        fails.append("груз требует рефрижератор")
 
     if c.get("body_type") in ("tral", "konteyner", "samosval") \
             and t.get("body_type") != c["body_type"]:
-        fails.append(f"kuzov turi mos emas ({c['body_type']})")
+        fails.append(f"не подходит тип кузова ({c['body_type']})")
 
     temp = c.get("temp_c")
     if temp is not None:
         lo, hi = t.get("temp_min"), t.get("temp_max")
         if lo is not None and temp < lo:
-            fails.append(f"harorat {temp}° mashina imkoniyatidan past")
+            fails.append(f"температура {temp}° ниже возможностей машины")
         if hi is not None and temp > hi:
-            fails.append(f"harorat {temp}° mashina imkoniyatidan yuqori")
+            fails.append(f"температура {temp}° выше возможностей машины")
 
     return fails
 
@@ -103,12 +103,12 @@ def evaluate(cargo, truck, costs=None, ignore_date: bool = False) -> dict:
     empty_km = geo.road_km(t.get("current_city"), c.get("from_city"), costs.road_factor)
     loaded_km = geo.road_km(c.get("from_city"), c.get("to_city"), costs.road_factor)
     if empty_km is None or loaded_km is None:
-        res["reasons"].append("shahar koordinatasi topilmadi")
+        res["reasons"].append("нет координат города")
         return res
 
     fails = hard_checks(c, t, costs)
     if empty_km > costs.max_empty_km:
-        fails.append(f"bo'sh probeg juda uzoq ({empty_km:.0f} km)")
+        fails.append(f"слишком большой пустой пробег ({empty_km:.0f} км)")
 
     # --- vaqt: mashina yuklashga yetib boradimi?
     free = _as_date(t.get("free_date")) or date.today()
@@ -118,7 +118,7 @@ def evaluate(cargo, truck, costs=None, ignore_date: bool = False) -> dict:
     slack_days = (load_date - arrival).days if load_date else None
     if not ignore_date and slack_days is not None \
             and slack_days < -costs.date_tolerance_days:
-        fails.append(f"yuklashga ulgurmaydi ({arrival:%d.%m} da yetadi)")
+        fails.append(f"не успевает к погрузке (прибудет {arrival:%d.%m})")
 
     # --- masofa va yoqilg'i
     total_km = empty_km + loaded_km
@@ -168,7 +168,7 @@ def evaluate(cargo, truck, costs=None, ignore_date: bool = False) -> dict:
         res["margin_usd"] = None
         res["margin_per_day"] = None
         res["rate_per_km"] = None
-        res["warnings"].append("stavka ko'rsatilmagan — marja hisoblanmadi")
+        res["warnings"].append("ставка не указана — маржа не рассчитана")
 
     # Kompaniya qoidalari (rules.py) — marjaga tegmaydi, faqat to'sadi yoki
     # ballni suradi. Qoidalar modulidagi xato hisobni to'xtatmaydi.

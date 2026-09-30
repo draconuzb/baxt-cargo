@@ -50,7 +50,7 @@ class Ctx:
             return
         self.offers.append({"match_id": match_id, "cargo_id": cargo["id"],
                             "truck_id": truck_id,
-                            "label": f"{cargo['from_city']}→{cargo['to_city']}"})
+                            "label": f"{geo.ru(cargo['from_city'])}→{geo.ru(cargo['to_city'])}"})
 
 
 # ---------------------------------------------------------------- yordamchi
@@ -255,7 +255,7 @@ def find_cargo(ctx: Ctx, truck_id=None, near_city=None, radius_km=None,
                 continue          # rahbar shu fura uchun rad etgan — qayta taklif qilmaymiz
             r = scoring.evaluate(c, t)
             if not r["ok"]:
-                if any(str(x).startswith("qoida #") for x in r["reasons"]):
+                if any(str(x).startswith("правило #") for x in r["reasons"]):
                     blocked += 1
                 continue
             if best is None or _rank_key({"result": r}) > _rank_key({"result": best}):
@@ -600,7 +600,7 @@ def _price_message(cargo: dict, truck: dict, ask: int, ask_uzs_mln) -> str:
     uzs = f" (≈{ask_uzs_mln:g} млн сум)" if ask_uzs_mln else ""
     free = truck.get("free_date") or ""
     when = "сегодня" if not free or free <= date.today().isoformat() else free
-    return (f"Здравствуйте! По грузу {cargo['from_city']} → {cargo['to_city']}{weight}: "
+    return (f"Здравствуйте! По грузу {geo.ru(cargo['from_city'])} → {geo.ru(cargo['to_city'])}{weight}: "
             f"готовы взять за ${ask}{uzs}. Машина {body} {truck.get('capacity_t') or ''} т, "
             f"подача {when}. Подтвердите, пожалуйста.").replace("  ", " ")
 
@@ -714,5 +714,8 @@ def call(ctx: Ctx, name: str, args: dict) -> dict:
 
 
 def dumps(value: dict, limit: int = 2800) -> str:
-    text = json.dumps(value, ensure_ascii=False, separators=(",", ":"), default=str)
+    """Asbob natijasi modelga. Shahar nomlari ruscha — AI ruscha javob beradi
+    (modelning qaytargan ruscha nomi `geo.lookup` dan o'tadi)."""
+    text = geo.ru_text(json.dumps(value, ensure_ascii=False, separators=(",", ":"),
+                                  default=str))
     return text if len(text) <= limit else text[:limit] + "…(truncated)"

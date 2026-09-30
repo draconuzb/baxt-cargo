@@ -176,15 +176,47 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
+# Ko'rsatish uchun ruscha nom (panel, bot va AI ruscha gapiradi). Bazada
+# kanonik nom qoladi (2-qoida) — bu faqat ko'rinish. Manba: `_RAW` dagi
+# birinchi alias (hammasi ruscha): "ташкент" -> "Ташкент".
+RU: dict[str, str] = {}
+_RU_LOWER = {"на"}
+_RU_FIX = {"Oryol": "Орёл"}            # lug'atda "ё" siz yozilgan
+
+
+def _ru_title(alias: str) -> str:
+    parts = re.split(r"([ -])", alias)
+    return "".join(p if p in (" ", "-") or p in _RU_LOWER else p[:1].upper() + p[1:]
+                   for p in parts)
+
+
 def _build():
     for name, lat, lon, country, aliases in _RAW:
         city = City(name, lat, lon, country)
         CITIES[name] = city
+        RU[name] = _RU_FIX.get(name) or _ru_title(aliases.split("|")[0])
         for a in [name, *aliases.split("|")]:
             _ALIAS_INDEX[_norm(a)] = name
 
 
 _build()
+
+
+def ru(name) -> str:
+    """Shahar nomi ruscha: "Toshkent" -> "Ташкент". Lug'atda yo'q bo'lsa — o'zi."""
+    if not name:
+        return "" if name is None else str(name)
+    return RU.get(str(name), str(name))
+
+
+_RU_TEXT = re.compile(
+    r"(?<![\w'])(" + "|".join(re.escape(n) for n in sorted(RU, key=len, reverse=True))
+    + r")(?![\w'])")
+
+
+def ru_text(text: str) -> str:
+    """Matndagi kanonik shahar nomlarini ruschaga (AI'ga beriladigan ma'lumot uchun)."""
+    return _RU_TEXT.sub(lambda m: RU[m.group(1)], text) if text else text
 
 
 # O'zbek kelishik qo'shimchalari (lotin va kirill; `_norm` dan keyin — ў→у, қ→к).

@@ -51,9 +51,9 @@ class Query:
         """So'rovni odam o'qiydigan ko'rinishda (ruscha — dispetcher uchun)."""
         parts = []
         if self.from_city and self.to_city:
-            parts.append(f"{self.from_city} → {self.to_city}")
+            parts.append(f"{geo.ru(self.from_city)} → {geo.ru(self.to_city)}")
         elif self.single_city:
-            parts.append(f"{self.single_city} (в любую сторону)")
+            parts.append(f"{geo.ru(self.single_city)} (в любую сторону)")
         if self.body_type:
             parts.append(self.body_type)
         if self.truck_id:

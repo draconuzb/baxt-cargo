@@ -214,7 +214,19 @@ def test_system_prompt_has_fleet_and_rules(fleet, ai_on, monkeypatch):
     ("01 uchun eng foydali yuk qaysi?", "UZBEK LATIN"),
 ])
 def test_script_hint(text, expect):
-    assert expect in brain._script_hint(text)
+    hint = brain._script_hint(text)
+    assert expect in hint
+    assert "ANSWER IN RUSSIAN" in hint           # buyurtmachi: AI doim ruscha
+
+
+def test_system_prompt_demands_russian():
+    assert "ALWAYS reply in RUSSIAN" in brain.SYSTEM
+
+
+def test_tool_output_uses_russian_city_names():
+    """AI ruscha yozadi — asbob natijasida ham shahar nomi ruscha bo'lsin."""
+    out = ai_tools.dumps({"route": "Toshkent -> Moskva", "at": "Farg'ona"})
+    assert "Ташкент -> Москва" in out and "Фергана" in out and "Toshkent" not in out
 
 
 def test_script_hint_is_sent(fleet, ai_on, monkeypatch):

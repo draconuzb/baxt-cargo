@@ -25,23 +25,23 @@ CACHE_TTL_SEC = 30
 # Chegara — noto'g'ri kiritilgan raqam (masalan 95 o'rniga 0.95) butun
 # ball hisobini buzmasligi uchun.
 FIELDS: list[tuple[str, str, str, float, float]] = [
-    ("fuel_price_usd", "Dizel narxi", "$/litr", 0.3, 3.0),
-    ("driver_usd_per_km", "Haydovchi ulushi", "$/km", 0.0, 1.0),
-    ("road_usd_per_km", "Yo'l to'lovi, platon", "$/km", 0.0, 1.0),
-    ("border_usd", "Bitta chegara o'tish", "$", 0.0, 2000.0),
-    ("fixed_usd", "Yuklash/tushirish va boshqa", "$", 0.0, 2000.0),
-    ("avg_speed_kmh", "O'rtacha tezlik (dam olish bilan)", "km/soat", 20.0, 90.0),
-    ("driving_hours_per_day", "Kunlik haydash soati", "soat", 4.0, 20.0),
-    ("road_factor", "Yo'l koeffitsienti (zaxira)", "×", 1.0, 2.0),
-    ("target_margin_per_day", "Maqsadli kunlik marja", "$/kun", 10.0, 5000.0),
-    ("market_rate_per_km", "Bozor stavkasi (zaxira)", "$/km", 0.1, 10.0),
-    ("max_empty_km", "Eng uzoq bo'sh probeg", "km", 0.0, 3000.0),
-    ("date_tolerance_days", "Yuklash sanasiga kechikish", "kun", 0.0, 10.0),
+    ("fuel_price_usd", "Цена дизеля", "$/литр", 0.3, 3.0),
+    ("driver_usd_per_km", "Оплата водителя", "$/км", 0.0, 1.0),
+    ("road_usd_per_km", "Дорожные сборы, Платон", "$/км", 0.0, 1.0),
+    ("border_usd", "Один переход границы", "$", 0.0, 2000.0),
+    ("fixed_usd", "Погрузка/выгрузка и прочее", "$", 0.0, 2000.0),
+    ("avg_speed_kmh", "Средняя скорость (с отдыхом)", "км/ч", 20.0, 90.0),
+    ("driving_hours_per_day", "Часов вождения в день", "ч", 4.0, 20.0),
+    ("road_factor", "Дорожный коэффициент (запасной)", "×", 1.0, 2.0),
+    ("target_margin_per_day", "Целевая маржа в день", "$/день", 10.0, 5000.0),
+    ("market_rate_per_km", "Рыночная ставка (запасная)", "$/км", 0.1, 10.0),
+    ("max_empty_km", "Макс. пустой пробег", "км", 0.0, 3000.0),
+    ("date_tolerance_days", "Допустимое опоздание к погрузке", "дн.", 0.0, 10.0),
 ]
 # Costs dan tashqari sozlamalar
 EXTRA_FIELDS: list[tuple[str, str, str, float, float]] = [
-    ("notify_threshold", "Bildirishnoma chegarasi (ball)", "0–100", 0.0, 100.0),
-    ("briefing_hour", "Ertalabki reja soati (Toshkent, −1 = o'chiq)", "soat", -1.0, 23.0),
+    ("notify_threshold", "Порог уведомления (балл)", "0–100", 0.0, 100.0),
+    ("briefing_hour", "Час утреннего плана (Ташкент, −1 = выкл.)", "ч", -1.0, 23.0),
 ]
 BRIEFING_HOUR_DEFAULT = 8
 ALL_FIELDS = {f[0]: f for f in FIELDS + EXTRA_FIELDS}
@@ -88,10 +88,10 @@ def validate(raw: dict) -> tuple[dict[str, float], dict[str, str]]:
         try:
             number = float(str(value).replace(",", ".").strip())
         except ValueError:
-            errors[name] = f"{label}: son emas"
+            errors[name] = f"{label}: не число"
             continue
         if not lo <= number <= hi:
-            errors[name] = f"{label}: {lo:g}–{hi:g} {unit} oralig'ida bo'lsin"
+            errors[name] = f"{label}: должно быть от {lo:g} до {hi:g} {unit}"
             continue
         clean[name] = int(number) if name in _INT_FIELDS else number
     return clean, errors

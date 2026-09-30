@@ -62,7 +62,7 @@ def test_empty_query():
 
 def test_describe_is_readable():
     q = search.parse_query("Ташкент Москва реф")
-    assert "Toshkent → Moskva" in q.describe()
+    assert "Ташкент → Москва" in q.describe()
 
 
 # ---------------------------------------------------------------- qidiruv

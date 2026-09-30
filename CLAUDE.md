@@ -44,7 +44,7 @@ ga xarajatlar, `python main.py calibrate` ga reyslar.
 |---|---|
 | `config.py` | Boshlang'ich sozlamalar. **Tahrirlanmaydi** |
 | `settings.py` | Panelda o'zgartirilgan sozlamalar (`settings` jadvali, 30 s kesh) |
-| `geo.py` | Shaharlar, masofa, yo'nalish koeffitsientlari, `nearest_city`, OSRM |
+| `geo.py` | Shaharlar, masofa, yo'nalish koeffitsientlari, `nearest_city`, OSRM, ruscha nom (`ru`) |
 | `parser.py` | E'lon → `Cargo`; `parse_many` — bir postda bir nechta yuk |
 | `dedup.py` | 3 bosqichli dubl filtri (sana boshqa bo'lsa — boshqa yuk) |
 | `db.py` | SQLite + `_migrate` (yangi ustunlar shu yerda) |
@@ -64,7 +64,6 @@ ga xarajatlar, `python main.py calibrate` ga reyslar.
 | `brain.py` | AI yurak: Mistral/Groq tool-calling, provayder almashinuvi, tarix |
 | `insight.py` | Kartochkadagi "Почему этот груз" izohi (dastur hisoblaydi, AI emas) |
 | `briefing.py` | Ertalabki reja (08:00 Toshkent, `settings.briefing_hour`), `/brief` |
-| `translit.py` | O'zbek lotin → kirill (kirillda so'ralsa AI javobi o'giriladi) |
 | `ai_eval.py` | AI sifat sinovi: `python main.py ai-eval` (baza nusxasida) |
 | `llm_parser.py` | Ixtiyoriy LLM fallback: Ollama/Mistral/Groq/OpenRouter/Anthropic |
 | `main.py` | CLI |
@@ -82,10 +81,19 @@ Har qanday o'zgartirishdan keyin `python main.py demo` va `pytest` ishlashi shar
 
 ## Qat'iy qoidalar
 
-1. **Til:** kod inglizcha, izohlar va panel matnlari o'zbekcha, Telegram
-   kartochkasi va bot javoblari ruscha.
-2. **Shahar nomlari** hamma joyda kanonik (`geo.CITIES` kaliti). Bazaga xom
-   matn yozilmaydi — panel va bot ham `geo.lookup` orqali o'tkazadi.
+1. **Til:** kod inglizcha, izohlar o'zbekcha. Foydalanuvchi ko'radigan
+   hamma narsa **ruscha** (buyurtmachi talabi, 2026-09-30): panel, Telegram
+   kartochkasi, bot tugmalari va javoblari, AI javobi (savol o'zbekcha
+   bo'lsa ham — `brain._script_hint`), dastur yozadigan sabablar
+   (`scoring`), hukmlar (`analytics`), sozlama nomlari (`settings`).
+   Ruscha son bilan: `web.plural(n, "фура", "фуры", "фур")`. "из Москва"
+   deb yozilmaydi — "из г. Москва" (kelishik yo'q).
+2. **Shahar nomlari** bazada kanonik (`geo.CITIES` kaliti, "Toshkent"). Bazaga
+   xom matn yozilmaydi — panel va bot ham `geo.lookup` orqali o'tkazadi.
+   Ko'rinishda — ruscha: panelda `web.ru(city)`, AI'ga `ai_tools.dumps`
+   (`geo.ru_text`), Telegramga har xabar `notifier.localize` dan o'tadi
+   (`_send_to` va `bot.api` ichida; `callback_data` kanonik qoladi).
+   Ruscha nom `geo.lookup` bilan kanonikka qaytadi (`test_geo`).
 3. **Pul:** hisob USD'da (`rate_usd`), ko'rsatish asl valyutada.
 4. **`cargos.raw_text` hech qachon o'chirilmaydi.**
 5. **Yangi kutubxona** faqat zarurat bo'lsa. Majburiy — faqat `telethon`
@@ -117,8 +125,8 @@ Har qanday o'zgartirishdan keyin `python main.py demo` va `pytest` ishlashi shar
 16. **Wialon** xatoni HTTP 200 bilan, javob ichida `{"error": N}` qilib
     qaytaradi — `_call` uni tekshiradi. Vaqt esa Unix (UTC), mahalliy
     vaqtga aylantirilmaydi (9-qoidaga qarang).
-16a. **Panel tuzilmasi — 5 ta tab** (iPhone birinchi): Bugun · Yuklar · [AI] ·
-    Park · Ko'proq (`web.TABS`). Yangi sahifa yangi tab emas — mos bo'lim
+16a. **Panel tuzilmasi — 5 ta tab** (iPhone birinchi): Сегодня · Грузы · [AI] ·
+    Парк · Ещё (`web.TABS`). Yangi sahifa yangi tab emas — mos bo'lim
     ichiga qo'shiladi (`web.MORE`, `web._SECTION`), ichki sahifada
     `top(..., back=...)` bilan orqaga havola. Telefonga jadval emas, ro'yxat
     (`.list`/`.li`, taklif — `_deal`).
