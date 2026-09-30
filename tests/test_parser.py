@@ -244,3 +244,31 @@ def test_phone(text, phone):
 
 def test_username():
     assert parser._parse_contact("пишите @uzlogistic")[1] == "uzlogistic"
+
+
+# ---------------------------------------------------------------- o'zbekcha qo'shimchalar
+
+@pytest.mark.parametrize("word,city", [
+    ("kazandan", "Qozon"), ("toshkentdan", "Toshkent"), ("almatiga", "Almaty"),
+    ("moskvagacha", "Moskva"), ("buxoroga", "Buxoro"), ("ташкентдан", "Toshkent"),
+    ("москвага", "Moskva"), ("москвы", "Moskva"), ("москву", "Moskva"),
+    ("казани", "Qozon"), ("ташкента", "Toshkent"),
+])
+def test_city_with_case_suffix(word, city):
+    import geo
+    assert geo.lookup(word) == city
+
+
+@pytest.mark.parametrize("word", ["tonnaga", "bugun", "kerak", "narxiga", "mashinaga"])
+def test_suffix_does_not_invent_cities(word):
+    import geo
+    assert geo.lookup(word) is None
+
+
+def test_messy_uzbek_ads_parse_without_ai():
+    from datetime import date
+    c = parser.parse("bratishka mashina kerak ertaga, kazandan tashkentga sovutgichli "
+                     "20 tonnaga yaqin", today=date(2026, 9, 30))
+    assert (c.kind, c.from_city, c.to_city, c.weight_t) == ("cargo", "Qozon", "Toshkent", 20)
+    c = parser.parse("kim Toshkentdan Almatiga ketyapti? 15 tonna qog'oz bor")
+    assert (c.from_city, c.to_city, c.weight_t) == ("Toshkent", "Almaty", 15)

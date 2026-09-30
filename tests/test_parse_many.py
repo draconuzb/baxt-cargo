@@ -182,3 +182,18 @@ def test_same_city_route_is_not_usable():
 def test_ready_means_today(text):
     from datetime import date
     assert parser._parse_date(parser.normalize(text), date(2026, 9, 30)) == date(2026, 9, 30)
+
+
+def test_blank_line_blocks_are_separate_cargos():
+    """Haqiqiy guruhdan (2026-09-30): Daniya yuki "Toshkent → Moskva" bo'lib qolgan edi."""
+    post = ("🇩🇰Дания–🇺🇿Ташкент\nНужен рефрижератор!!!\n20 тонны\n13 000$\n"
+            "Погрузка 01.10.2026\n\n+998XXXXXXXXX\n\n\n\n🇺🇿Ферган–\n🇷🇺Москва (Балашиха)\n"
+            "Реф\n22 тонны\n\n +998XXXXXXXXX")
+    items = parser.parse_many(post)
+    assert [(c.from_city, c.to_city) for c in items] == [("Farg'ona", "Moskva")]
+    assert items[0].weight_t == 22 and items[0].rate is None   # Daniya narxi yopishmadi
+
+
+def test_one_cargo_written_in_blocks_still_one():
+    items = parser.parse_many("Загрузка: Москва\n\nВыгрузка: Ташкент\n\n20т тент 4000$")
+    assert [(c.from_city, c.to_city, c.rate) for c in items] == [("Moskva", "Toshkent", 4000)]

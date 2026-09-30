@@ -209,7 +209,9 @@ def test_city_names_are_canonical(groq, fake_http):
     """Model ruscha nom qaytaradi — bazaga kanonik nom tushishi shart."""
     fake_http.state["reply"] = {**GOOD_ANSWER, "from_city": "Казань",
                                 "to_city": "Алматы"}
-    cargo = llm_parser.enrich(ad_parser.parse(MESSY))
+    # shaharsiz matn: parser endi "Moskvaga" ni o'zi taniydi (-ga = qayerga)
+    cargo = llm_parser.enrich(ad_parser.parse(
+        "bratishka sovutgich kerak edi, 20 ga yaqin, 12-sida yuklanadi"))
     assert (cargo.from_city, cargo.to_city) == ("Qozon", "Almaty")
 
 
@@ -287,3 +289,21 @@ def test_llm_saves_an_ad_regex_missed(clean_db, groq, fake_http, monkeypatch):
     row = clean_db.get_cargo(ids[0])
     assert (row["from_city"], row["to_city"]) == ("Toshkent", "Moskva")
     assert row["raw_text"] == MESSY
+
+
+def test_llm_cannot_flip_explicit_kind(monkeypatch):
+    """"mashina kerak" — yuk bor (parser belgisi). Model "truck" desa ham o'zgarmaydi."""
+    import parser as ad_parser
+    monkeypatch.setattr(llm_parser, "ask", lambda text, today=None: {"kind": "truck"})
+    c = ad_parser.parse("mashina kerak, Qozondan 20 tonna")
+    assert llm_parser.enrich(c).kind == "cargo"
+
+
+def test_llm_date_needs_hint_in_text(monkeypatch):
+    import parser as ad_parser
+    monkeypatch.setattr(llm_parser, "ask",
+                        lambda text, today=None: {"load_date": "2026-09-30"})
+    c = llm_parser.enrich(ad_parser.parse("Груз Москва Ташкент 20т"))
+    assert c.load_date is None                    # matnda sana yo'q — o'ylab topilmaydi
+    c = llm_parser.enrich(ad_parser.parse("Груз Москва Ташкент 20т, 30-сент"))
+    assert c.load_date is not None

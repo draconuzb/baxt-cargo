@@ -1091,18 +1091,13 @@ def _offer(row) -> str:
 
 
 def _rank_offers(rows) -> list:
-    """Asosiy tamoyil: kunlik marja. Avval narxi bor va foydali yuklar,
-    keyin narxi yozilmaganlar (qo'ng'iroq qilib so'rash kerak), oxirida zararlilar."""
-    def key(r):
-        per_day = _details(r).get("margin_per_day")
-        if per_day is None:
-            return (1, -r["score"])
-        return (0 if per_day > 0 else 2, -per_day)
-    return sorted(rows, key=key)
+    import search
+    return search.rank_offers(rows)
 
 
 def _best_offers(truck_id: str, n: int) -> list:
-    return _rank_offers(db.top_matches(limit=60, truck_id=truck_id))[:n]
+    import search
+    return search.best_offers(truck_id, n)
 
 
 def _ask_ai_button(question: str, label: str = "AI dan so'rash") -> str:

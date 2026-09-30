@@ -102,12 +102,16 @@ def match_and_notify(cargo_id: int) -> list[dict]:
 
     for r in results:
         match_id = db.save_match(cargo_id, r["truck_id"], r)
-        if r["score"] >= threshold and match_id:
+        # Yo'ldagi fura uchun qaytish yuki: belgi va pastroq chegara (returns.py)
+        return_reason = _return_reason(r["truck_id"])
+        limit = min(threshold, returns_threshold()) if return_reason else threshold
+        if r["score"] >= limit and match_id:
             # Bildirishnoma yuborilmasa ham moslik bazada qoladi — dispetcher
             # uni `report` da ko'radi. Telegram xatosi oqimni to'xtatmaydi.
             try:
                 why = _insight(cargo, r, results)
-                if notifier.notify_match(cargo, r, match_id, reason=reason, insight=why):
+                if notifier.notify_match(cargo, r, match_id, reason=reason or return_reason,
+                                         insight=why):
                     db.mark_notified(match_id)
             except Exception:
                 log.exception("Bildirishnoma yuborilmadi (moslik #%s)", match_id)
@@ -152,6 +156,20 @@ def rematch_cargo(cargo_id: int) -> int:
                 db.revive_match(cargo_id, r["truck_id"], r):
             written += 1
     return written
+
+
+def returns_threshold() -> float:
+    import returns
+    return returns.RETURN_THRESHOLD
+
+
+def _return_reason(truck_id: str) -> str | None:
+    try:
+        import returns
+        return returns.match_reason(truck_id)
+    except Exception:
+        log.exception("Qaytish yuki belgisida xato")
+        return None
 
 
 def _insight(cargo: dict, result: dict, results: list[dict]) -> list[str]:

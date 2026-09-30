@@ -430,3 +430,21 @@ def test_retry_after_parsed_from_groq_body():
         headers = {}
     body = '{"error":{"message":"Rate limit reached ... Please try again in 9.5925s."}}'
     assert brain._retry_after(Ex(), body) == pytest.approx(9.5925)
+
+
+def test_button_for_cargo_mentioned_without_tool(fleet, ai_on, monkeypatch):
+    """"1182 ga tugma ber" — AI asbobsiz javob bersa ham "✅ Беру" chiqadi."""
+    cid = fleet["ids"][0]
+    monkeypatch.setattr(brain, "chat_completion", Script(
+        {"role": "assistant", "content": f"#{cid} — Toshkent → Moskva, №01 uchun eng yaxshisi"}))
+    res = brain.reply(777, f"{cid} yubor tugmani")
+    assert res.tools_used == []
+    btn = res.keyboard["inline_keyboard"][0][0]
+    assert btn["callback_data"].startswith("take:") and f"#{cid}" in btn["text"]
+    assert "№01" in btn["text"]                         # aytilgan fura
+
+
+def test_no_button_for_taken_or_unknown_cargo(fleet, ai_on, monkeypatch):
+    monkeypatch.setattr(brain, "chat_completion",
+                        Script({"role": "assistant", "content": "#999999 bunday yuk yo'q"}))
+    assert brain.reply(777, "999999").keyboard is None

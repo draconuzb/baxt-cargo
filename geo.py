@@ -187,6 +187,27 @@ def _build():
 _build()
 
 
+# O'zbek kelishik qo'shimchalari (lotin va kirill; `_norm` dan keyin — ў→у, қ→к).
+# Uzunidan qisqasiga: "gacha" "ga" dan oldin tekshirilsin.
+_UZ_SUFFIXES = ("gacha", "гача", "dagi", "даги", "ning", "нинг", "dan", "дан",
+                "ga", "га", "da", "да", "ka", "ка", "qa", "ni", "ни")
+
+
+def _case_variants(t: str) -> list[str]:
+    """So'zning qo'shimchasiz shakllari (shahar nomini topish uchun)."""
+    out = []
+    for suf in _UZ_SUFFIXES:
+        if t.endswith(suf) and len(t) - len(suf) >= 3:
+            out.append(t[:-len(suf)])
+    # Ruscha kelishiklar: москвы/москву/москве -> москва, казани -> казань,
+    # ташкента -> ташкент
+    if len(t) >= 5 and t[-1] in "ыуеи":
+        out += [t[:-1] + "а", t[:-1] + "ь", t[:-1]]
+    if len(t) >= 5 and t[-1] == "а":
+        out.append(t[:-1])
+    return out
+
+
 def lookup(token: str, threshold: float = 0.87) -> str | None:
     """Bitta so'z/ibora bo'yicha shaharni topadi (aniq, keyin taxminiy)."""
     t = _norm(token)
@@ -194,6 +215,11 @@ def lookup(token: str, threshold: float = 0.87) -> str | None:
         return None
     if t in _ALIAS_INDEX:
         return _ALIAS_INDEX[t]
+    # "Toshkentdan", "Almatiga", "Москвы", "Казани" — qo'shimcha/kelishik bilan.
+    # Faqat lug'atdagi ANIQ nomga mos kelsa: "tonnaga" shaharga aylanib qolmasin.
+    for v in _case_variants(t):
+        if v in _ALIAS_INDEX and v not in _STOPWORDS:
+            return _ALIAS_INDEX[v]
     if len(t) < 4:  # qisqa so'zlarni faqat aniq moslikda olamiz
         return None
     best, best_score = None, 0.0

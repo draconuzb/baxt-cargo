@@ -39,6 +39,7 @@ POLL_TIMEOUT = 25            # getUpdates necha soniya kutadi
 EXPIRE_EVERY_SEC = 600       # eskirgan yuklarni qanchada bir tozalaymiz
 GPS_EVERY_SEC = 1800         # GPS holatini qanchada bir yangilaymiz
 LEARN_EVERY_SEC = 24 * 3600  # qarorlardan o'rganish — kuniga bir marta
+RETURNS_EVERY_SEC = 3600     # qaytish yuki eslatmasi — soatiga bir tekshiruv
 ROUNDTRIP_TOP = 3
 
 
@@ -1111,6 +1112,7 @@ def run() -> None:
     last_expire = 0.0
     last_gps = time.time()          # ishga tushishda darhol yugurtirmaymiz
     last_learn = time.time()
+    last_returns = 0.0
 
     while True:
         if time.time() - last_expire > EXPIRE_EVERY_SEC:
@@ -1137,6 +1139,15 @@ def run() -> None:
         if time.time() - last_learn > LEARN_EVERY_SEC:
             last_learn = time.time()
             _learn_and_notify()
+
+        # Qaytish yuki eslatmasi — soatiga bir marta tekshiriladi
+        if time.time() - last_returns > RETURNS_EVERY_SEC:
+            last_returns = time.time()
+            try:
+                import returns
+                returns.remind_due()
+            except Exception:
+                log.exception("Qaytish eslatmasida xato")
 
         # Ertalabki reja — vaqti kelganini o'zi tekshiradi (kuniga bir marta)
         try:

@@ -114,6 +114,31 @@ def _ensure_match(cargo: dict, truck_id: str, result: dict) -> int | None:
     return db.revive_match(cargo["id"], truck_id, result)
 
 
+def offer_for_cargo(ctx: Ctx, cargo_id: int, truck_id: str | None = None) -> int | None:
+    """Yuk uchun "Olaman" tugmasi (moslik id). Fura berilmasa — eng foydalisi.
+
+    Rad etilgan (skipped) juftliklar taklif qilinmaydi; yuk band bo'lsa — None.
+    """
+    row = db.get_cargo(cargo_id)
+    if row is None or row["status"] != "new":
+        return None
+    cargo = _row(row)
+    skipped = _skipped_pairs()
+    trucks = _trucks(_truck_id(truck_id)) if truck_id else _trucks()
+    best = None
+    for t in trucks:
+        if (cargo_id, str(t["id"])) in skipped:
+            continue
+        r = scoring.evaluate(cargo, t)
+        if r["ok"] and (best is None or _rank_key({"result": r}) > _rank_key({"result": best})):
+            best = r
+    if best is None:
+        return None
+    match_id = _ensure_match(cargo, best["truck_id"], best)
+    ctx.add_offer(match_id, cargo, best["truck_id"])
+    return match_id
+
+
 def _rank_key(item: dict):
     """Asosiy tamoyil: kunlik marja; stavkasi yo'qlar oxirida."""
     r = item["result"]

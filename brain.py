@@ -479,9 +479,33 @@ def to_telegram_html(text: str) -> str:
     return text.strip()[:4000]
 
 
+_CARGO_REF = re.compile(r"#([1-9]\d{0,6})\b")        # #1182 — yuk
+_TRUCK_REF = re.compile(r"(?:№\s?|#)(0\d)\b")          # №03 / #03 — fura
+
+
+def _offers_for_mentioned(ctx: ai_tools.Ctx, answer: str) -> None:
+    """Javobda tilga olingan har bir yuk uchun "✅ Беру" bo'lsin.
+
+    AI oldingi javobni takrorlaganda asbob chaqirmaydi ("1182 ga tugma ber")
+    — ilgari bunda tugma chiqmasdi. Endi moslik yozuvini dastur o'zi topadi.
+    Javobda bitta fura aniq aytilgan bo'lsa — o'sha fura uchun.
+    """
+    have = {o["cargo_id"] for o in ctx.offers}
+    trucks = {t for t in _TRUCK_REF.findall(answer)}
+    truck_id = trucks.pop() if len(trucks) == 1 else None
+    for raw in _CARGO_REF.findall(answer)[:5]:
+        cargo_id = int(raw)
+        if cargo_id not in have:
+            try:
+                ai_tools.offer_for_cargo(ctx, cargo_id, truck_id)
+            except Exception:
+                log.exception("Yuk #%s uchun tugma tayyorlanmadi", cargo_id)
+
+
 def _keyboard(ctx: ai_tools.Ctx, answer: str) -> dict | None:
     """Javob ostidagi tugmalar: taklif qilingan yuklar, yangi qoidalar."""
     rows = []
+    _offers_for_mentioned(ctx, answer)
     mentioned = [o for o in ctx.offers if f"#{o['cargo_id']}" in answer]
     offers = mentioned or ctx.offers[:3]
     for o in offers[:5]:

@@ -283,10 +283,47 @@ def _parse_contact(text: str) -> tuple[str | None, str | None]:
     return phone, (um.group(1) if um else None)
 
 
+# Yo'nalish belgilari: "Toshkentdan" (qayerdan), "Moskvaga" (qayerga),
+# "из Москвы" / "в Ташкент". Qo'shimcha faqat so'z o'zi aniq shahar nomi
+# bo'lmaganda hisoblanadi ("Kaluga" — "-ga" qo'shimchasi emas).
+_FROM_SUFFIXES = ("dan", "дан")
+_TO_SUFFIXES = ("gacha", "гача", "ga", "га", "ka", "ка", "qa")
+_FROM_PREPS = {"из", "с", "со", "от", "iz"}
+_TO_PREPS = {"в", "во", "до", "на"}
+
+
+def _route_role(words: list[str], i: int) -> str | None:
+    """Shahar so'zining roli: "from" | "to" | None (belgisiz — tartib bo'yicha)."""
+    w = words[i] if i < len(words) else ""
+    if w and w not in geo._ALIAS_INDEX:
+        if w.endswith(_FROM_SUFFIXES):
+            return "from"
+        if w.endswith(_TO_SUFFIXES):
+            return "to"
+    prev = words[i - 1] if i > 0 else ""
+    if prev in _FROM_PREPS:
+        return "from"
+    if prev in _TO_PREPS:
+        return "to"
+    return None
+
+
 def _parse_route(t: str) -> tuple[str | None, str | None, list[str]]:
     cities = geo.find_cities(t)
     if not cities:
         return None, None, []
+    words = geo._norm(t).split()
+    roles = [(name, _route_role(words, pos)) for pos, name in cities]
+    if any(role for _, role in roles):
+        # Belgi bor — qo'shimcha/predlog tartibdan ustun
+        frm = next((n for n, r in roles if r == "from"), None)
+        to = next((n for n, r in roles if r == "to" and n != frm), None)
+        rest = [n for n, r in roles if r is None and n not in (frm, to)]
+        if frm is None and to is not None and rest:
+            frm = rest.pop(0)
+        if to is None and rest:
+            to = rest.pop(0)
+        return frm, to, []
     names = [c[1] for c in cities]
     if len(names) == 1:
         return names[0], None, []
@@ -393,6 +430,34 @@ def _inherit(c: Cargo, head: str, whole_text: str, today: date | None) -> None:
         c.rate_per_ton = False
 
 
+def _parse_blocks(text: str, source: str, msg_id, posted_at, today) -> list[Cargo] | None:
+    """Bo'sh qator bilan ajratilgan e'lonlar. Mos kelmasa — None (eski usul)."""
+    blocks: list[str] = []
+    for part in re.split(r"\n\s*\n", text):
+        if not part.strip():
+            continue
+        if _city_count(part) >= 1 or not blocks:
+            blocks.append(part)
+        else:
+            blocks[-1] += "\n" + part          # shaharsiz blok: telefon, "20 тонн"
+    if sum(1 for b in blocks if _city_count(b) >= 1) < 2:
+        return None
+    out = []
+    for block in blocks:
+        if classify(block) == "truck":
+            continue
+        c = parse(block, source=source, msg_id=msg_id, posted_at=posted_at, today=today)
+        _inherit(c, "", text, today)
+        c.confidence = _confidence(c)
+        if c.kind == "other":
+            c.kind = "cargo" if c.confidence >= 0.5 else "other"
+        if is_usable(c):
+            out.append(c)
+    # Hech bir blok o'zi yuk bo'lmadi ("Загрузка: Москва" \n\n "Выгрузка: Ташкент")
+    # — bu bitta yukning qismlari, eski usulga qaytamiz
+    return out or None
+
+
 def parse_many(text: str, source: str = "", msg_id: int | None = None,
                posted_at: datetime | None = None,
                today: date | None = None) -> list[Cargo]:
@@ -404,6 +469,13 @@ def parse_many(text: str, source: str = "", msg_id: int | None = None,
     ko'ramiz. Ro'yxat ajralmasa — bitta `parse()` natijasi qaytadi.
     """
     whole = parse(text, source=source, msg_id=msg_id, posted_at=posted_at, today=today)
+
+    # Bo'sh qator bilan ajratilgan bloklar, har birida o'z yo'nalishi —
+    # alohida yuklar ("🇩🇰Дания–Ташкент ... \n\n 🇺🇿Ферган–🇷🇺Москва").
+    # Aks holda ular bitta "Toshkent → Farg'ona → Moskva" zanjiriga qo'shilib ketadi.
+    by_blocks = _parse_blocks(text, source, msg_id, posted_at, today)
+    if by_blocks is not None:
+        return by_blocks
 
     # Bo'sh mashinalar ro'yxatini yuk deb bo'lib tashlamaymiz
     names = [n for _, n in geo.find_cities(normalize(text))]

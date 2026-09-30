@@ -213,3 +213,30 @@ def matches_watch(cargo: dict, watch) -> bool:
     if watch["body_type"] and cargo.get("body_type") != watch["body_type"]:
         return False
     return True
+
+
+# ---------------------------------------------------------------- takliflar tartibi
+
+def details(row) -> dict:
+    """Moslik yozuvidagi to'liq hisob (JSON)."""
+    import json
+    try:
+        return json.loads(row["details"]) if row["details"] else {}
+    except (ValueError, TypeError):
+        return {}
+
+
+def rank_offers(rows) -> list:
+    """Asosiy tamoyil: kunlik marja. Avval narxi bor va foydali yuklar,
+    keyin narxi yozilmaganlar (qo'ng'iroq qilib so'rash kerak), oxirida zararlilar.
+    Panel, bot va eslatmalar shu bitta tartibdan foydalanadi."""
+    def key(r):
+        per_day = details(r).get("margin_per_day")
+        if per_day is None:
+            return (1, -r["score"])
+        return (0 if per_day > 0 else 2, -per_day)
+    return sorted(rows, key=key)
+
+
+def best_offers(truck_id: str, n: int) -> list:
+    return rank_offers(db.top_matches(limit=60, truck_id=truck_id))[:n]

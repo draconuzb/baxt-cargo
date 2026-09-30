@@ -29,6 +29,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import urllib.error
 import urllib.request
 from datetime import date, datetime
@@ -283,7 +284,10 @@ def enrich(cargo: ad_parser.Cargo, today: date | None = None) -> ad_parser.Cargo
     if not data:
         return cargo
 
-    if data.get("kind") in ("cargo", "truck", "other"):
+    # E'lon turi: matnda aniq belgi bo'lsa ("mashina kerak", "ищу груз") —
+    # parser ustun. 8B model "mashina kerak" ni bo'sh fura deb adashgan.
+    explicit = ad_parser.classify(cargo.raw_text)
+    if data.get("kind") in ("cargo", "truck", "other") and explicit == "unknown":
         cargo.kind = data["kind"]
     # Shahar nomi lug'atdan o'tkaziladi — bazaga faqat kanonik nom tushadi
     if not cargo.from_city and data.get("from_city"):
@@ -302,7 +306,8 @@ def enrich(cargo: ad_parser.Cargo, today: date | None = None) -> ad_parser.Cargo
         rate = _number(data["rate"], 1, 10_000_000_000)
         if rate and currency in config.RATES_TO_USD:
             cargo.rate, cargo.currency = rate, currency
-    if not cargo.load_date and data.get("load_date"):
+    # Sana faqat matnda sana izi bo'lsa — aks holda model "bugun" ni o'ylab topadi
+    if not cargo.load_date and data.get("load_date") and _DATE_HINT.search(cargo.raw_text):
         try:
             cargo.load_date = datetime.fromisoformat(str(data["load_date"])[:10]).date()
         except ValueError:
@@ -314,6 +319,12 @@ def enrich(cargo: ad_parser.Cargo, today: date | None = None) -> ad_parser.Cargo
 
     cargo.confidence = ad_parser._confidence(cargo)
     return cargo
+
+
+_DATE_HINT = re.compile(
+    r"\d{1,2}\s*[./-]\s*\d{1,2}|\d{1,2}\s*-?\s*(?:янв|фев|мар|апр|ма[йя]|июн|июл|авг|сен|окт|ноя|"
+    r"дек|yan|fev|mart|apr|may|iyun|iyul|avg|sen|okt|noy|dek)"
+    r"|\d{1,2}\s*-\s*(?:sida|si|chi|числа|го|е)|числа", re.I)
 
 
 def _number(value, lo: float, hi: float) -> float | None:
