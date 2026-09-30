@@ -306,6 +306,58 @@ def format_taken(cargo: dict, truck: dict, free_date: str) -> str:
             f"{truck.get('driver_phone') or ''}".strip())
 
 
+def format_driver_trip(cargo: dict, truck: dict, free_date: str | None) -> str:
+    """Haydovchiga: yangi reys (ruscha — bot tili)."""
+    truck, cargo = dict(truck or {}), dict(cargo or {})     # sqlite3.Row ham bo'lishi mumkin
+    body = _BODY_NAME.get(cargo.get("body_type"), cargo.get("body_type") or "")
+    temp = f" {cargo['temp_c']:+.0f}°C" if cargo.get("temp_c") is not None else ""
+    weight = f"{cargo['weight_t']:g} т" if cargo.get("weight_t") else ""
+    what = " · ".join(x for x in (weight, f"{body}{temp}".strip()) if x) or "—"
+    contact = " · ".join(x for x in (cargo.get("phone"),
+                                     f"@{cargo['username']}" if cargo.get("username") else "")
+                         if x) or "—"
+    raw = escape((cargo.get("raw_text") or "")[:500])
+    return (f"🚚 <b>Новый рейс — машина №{escape(truck.get('id'))}</b>\n\n"
+            f"<b>{escape(cargo.get('from_city'))} → {escape(cargo.get('to_city'))}</b>\n"
+            f"📅 Погрузка: {escape(cargo.get('load_date') or 'уточните у отправителя')}\n"
+            f"📦 Груз: {escape(what)}\n"
+            f"📞 Отправитель: {escape(contact)}\n"
+            f"🏁 Освободитесь примерно: {escape(free_date or '—')}\n\n"
+            f"<i>Объявление:</i>\n<code>{raw}</code>")
+
+
+def format_driver_cancel(cargo: dict, truck: dict) -> str:
+    truck, cargo = dict(truck or {}), dict(cargo or {})
+    return (f"❌ <b>Рейс отменён — машина №{escape(truck.get('id'))}</b>\n"
+            f"{escape(cargo.get('from_city'))} → {escape(cargo.get('to_city'))}\n"
+            f"Ждите новое задание от диспетчера.")
+
+
+def notify_driver(truck_id: str, text: str) -> bool:
+    """Haydovchiga shaxsan (u botga `/link` bilan ulangan bo'lsa). Yuborilsa True."""
+    import db
+    truck = db.get_truck(truck_id)
+    if truck is None or not truck["tg_user_id"]:
+        return False
+    try:
+        result = send(text, chat_id=str(truck["tg_user_id"]))
+        return bool(result and result.get("ok"))
+    except Exception:
+        log.exception("Haydovchiga yuborilmadi (fura %s)", truck_id)
+        return False
+
+
+def driver_hint(truck: dict) -> str:
+    """Dispetcherga: haydovchi botga ulanmagan bo'lsa — nima qilish kerak."""
+    truck = dict(truck or {})
+    if truck.get("plate"):
+        return (f"ℹ️ Водитель №{escape(truck.get('id'))} не подключён к боту — пусть откроет "
+                f"бота и отправит: <code>/link {escape(truck.get('id'))} "
+                f"{escape(truck.get('plate'))}</code>. Тогда рейсы будут приходить ему сами.")
+    return (f"ℹ️ Водитель №{escape(truck.get('id'))} не подключён к боту. Сначала впишите "
+            f"госномер машины в панели (Park → №{escape(truck.get('id'))} → Tahrirlash).")
+
+
 def format_search(found: dict) -> str:
     """Dispetcher so'roviga javob: "Тошкент Москва юк топиб бер".
 

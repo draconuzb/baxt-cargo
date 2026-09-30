@@ -215,6 +215,10 @@ def on_undo(match_id: int, chat_id, message_id: int, markup: dict | None = None)
     if status == "ok":
         set_keyboard(chat_id, message_id,
                      notifier.decided_keyboard("↩️ Рейс отменён — груз снова свободен"))
+        cargo = db.get_cargo(m["cargo_id"])
+        if cargo is not None:
+            notifier.notify_driver(m["truck_id"], notifier.format_driver_cancel(
+                dict(cargo), {"id": m["truck_id"]}))
         try:
             pipeline.rematch_cargo(m["cargo_id"])
             pipeline.rematch_all(48, [m["truck_id"]])
@@ -270,7 +274,12 @@ def on_take(match_id: int, chat_id, message_id: int, markup: dict | None = None)
     truck_id = res.match["truck_id"]
     set_keyboard(chat_id, message_id,
                  _decided(markup, f"take:{match_id}", f"✅ Взято — машина №{truck_id}"))
-    send(chat_id, notifier.format_taken(res.cargo, res.truck or {}, res.free_date),
+    driver_ok = notifier.notify_driver(
+        truck_id, notifier.format_driver_trip(res.cargo, db.get_truck(truck_id) or {},
+                                              res.free_date))
+    note = ("\n📨 Водителю отправлено." if driver_ok else
+            "\n\n" + notifier.driver_hint(dict(db.get_truck(truck_id) or {"id": truck_id})))
+    send(chat_id, notifier.format_taken(res.cargo, res.truck or {}, res.free_date) + note,
          trip_keyboard(match_id))
 
     # qaytish yuki — mashina bo'sh qaytmasligi uchun darhol taklif qilamiz
@@ -609,7 +618,12 @@ def cmd_link(chat_id, user_id, args: list[str]) -> None:
         send(chat_id, "Формат: <code>/link 01 01A123AA</code> "
                       "(номер машины и госномер)")
         return
-    truck = db.get_truck(args[0].lstrip("№#"))
+    truck = db.get_truck(args[0].lstrip("№#").zfill(2) if args[0].lstrip("№#").isdigit()
+                         else args[0].lstrip("№#"))
+    if truck is not None and not truck["plate"]:
+        send(chat_id, "Для этой машины ещё не указан госномер. Попросите диспетчера "
+                      "вписать его в панели, затем повторите /link.")
+        return
     if truck is None or _plate_key(truck["plate"]) != _plate_key(args[1]):
         send(chat_id, "Машина или госномер не совпадают.")
         return
@@ -618,7 +632,8 @@ def cmd_link(chat_id, user_id, args: list[str]) -> None:
         return
 
     db.link_truck_tg_user(truck["id"], user_id)
-    send(chat_id, f"✅ Машина №{truck['id']} привязана.\n\n"
+    send(chat_id, f"✅ Машина №{truck['id']} привязана. Новые рейсы будут приходить "
+                  f"вам сюда автоматически.\n\n"
                   f"Теперь отправьте <b>Live Location</b> (скрепка → "
                   f"Геопозиция → Транслировать), и диспетчер будет видеть, "
                   f"где вы находитесь.")

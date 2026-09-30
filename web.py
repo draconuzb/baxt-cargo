@@ -1386,13 +1386,19 @@ def create_app() -> FastAPI:
             return _redirect(f"/cargo/{cargo_id}" if cargo_id else "/")
 
         # Telegram chati ham bilsin — dispetcherlardan biri telefonda bo'lishi mumkin
+        truck_id = res.match["truck_id"]
+        driver_ok = False
         try:
+            driver_ok = notifier.notify_driver(
+                truck_id, notifier.format_driver_trip(
+                    res.cargo, dict(db.get_truck(truck_id) or {"id": truck_id}), res.free_date))
             notifier.send(notifier.format_taken(res.cargo, res.truck or {}, res.free_date)
-                          + "\n<i>(панель)</i>")
+                          + "\n<i>(панель)</i>"
+                          + ("\n📨 Водителю отправлено." if driver_ok else ""))
         except Exception:
             log.exception("Telegramga tasdiq yuborilmadi")
 
-        url = f"/cargo/{res.cargo['id']}?taken=1"
+        url = f"/cargo/{res.cargo['id']}?taken=1&driver={1 if driver_ok else 0}"
         if _is_htmx(request):
             return HTMLResponse(
                 f'<div class="offer done" id="m{match_id}">'
@@ -1557,14 +1563,18 @@ def create_app() -> FastAPI:
                     + "".join(notes) + filters + listing, active="/cargos")
 
     @app.get("/cargo/{cargo_id}")
-    async def cargo_detail(cargo_id: int, taken: str = ""):
+    async def cargo_detail(cargo_id: int, taken: str = "", driver: str = ""):
         c = db.get_cargo(cargo_id)
         if c is None:
             return page("Topilmadi", _note("err", f"Yuk #{cargo_id} topilmadi"),
                         status_code=404)
         matches = db.matches_for_cargo(cargo_id)
-        notes = _note("ok", f'{anim("party", 24)} Reys biriktirildi. Fura holati yangilandi.') \
-            if taken else ""
+        notes = ""
+        if taken:
+            said = ("Haydovchiga Telegram orqali yuborildi." if driver == "1" else
+                    "Haydovchi botga ulanmagan — reysni o'zingiz yetkazing (Park → fura → "
+                    "Telegram qatorida qanday ulash yozilgan).")
+            notes = _note("ok", f'{anim("party", 24)} Reys biriktirildi. {said}')
 
         via = ""
         try:
@@ -1879,6 +1889,10 @@ shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
         m = db.get_match(match_id)
         status = actions.undo_take(match_id)
         if status == "ok" and m is not None:
+            cargo = db.get_cargo(m["cargo_id"])
+            if cargo is not None:
+                notifier.notify_driver(m["truck_id"], notifier.format_driver_cancel(
+                    dict(cargo), {"id": m["truck_id"]}))
             # yuk va fura yana taklif qilinsin
             await run_in_threadpool(pipeline.rematch_cargo, m["cargo_id"])
             await run_in_threadpool(pipeline.rematch_all, 48, [m["truck_id"]])
@@ -2373,6 +2387,10 @@ def _truck_page(truck_id: str, note: str = "", open_edit: bool = False,
               f'<b>{e(truck["current_city"] or "—")}</b>{src_pill}'),
              ("Haydovchi", e(truck["driver"] or "—")),
              ("Telefon", phone),
+             ("Telegram", "ulangan — reyslar o'zi boradi" if truck["tg_user_id"] else
+              (f'ulanmagan · haydovchi botga yozsin: <code>/link {e(truck_id)} '
+               f'{e(truck["plate"])}</code>' if truck["plate"] else
+               "ulanmagan · avval davlat raqamini kiriting")),
              ("GPS", gps_txt),
              ("Yoqilg'i", f'{truck["fuel_l_100km"] or 0:g} l/100km'),
              ("Afzal yo'nalish", e(truck["preferred_dir"] or "—"))]

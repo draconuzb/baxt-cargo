@@ -146,3 +146,52 @@ def test_bot_done_finishes_trip(scene, tg):
     actions.take_match(m["id"])
     bot.handle_message({"message_id": 1, "chat": {"id": 777}, "text": f"/done {m['id']} 1850"})
     assert db.get_match(m["id"])["finished_at"] is not None
+
+
+# ---------------------------------------------------------------- haydovchiga xabar
+
+@pytest.fixture
+def outbox(monkeypatch):
+    """notifier.send ning haqiqiy yo'li: kimga nima ketdi (chat -> matnlar)."""
+    import notifier
+    sent = []
+
+    def fake_send(text, reply_markup=None, chat_id=None):
+        sent.append((str(chat_id or "777"), text))
+        return {"ok": True}
+    monkeypatch.setattr(notifier, "send", fake_send)     # scene "jim" send'ini almashtiramiz
+    monkeypatch.setattr(config, "BOT_TOKEN", "t")
+    monkeypatch.setattr(config, "DISPATCHER_CHAT_ID", "777")
+    return sent
+
+
+def test_linked_driver_gets_trip(scene, tg, outbox):
+    import bot
+    db.link_truck_tg_user("01", 5551)
+    m = db.find_match(scene["ids"][0], "01")
+    bot.handle_callback(cb(f"take:{m['id']}"))
+    to_driver = [t for chat, t in outbox if chat == "5551"]
+    assert to_driver and "Новый рейс" in to_driver[0] and "Toshkent → Moskva" in to_driver[0]
+    dispatcher = [c["text"] for c in tg if c["method"] == "sendMessage"][0]
+    assert "Водителю отправлено" in dispatcher
+
+    bot.handle_callback(cb(f"undo:{m['id']}"))
+    assert any("Рейс отменён" in t for chat, t in outbox if chat == "5551")
+
+
+def test_unlinked_driver_hint(scene, tg, outbox):
+    import bot
+    db.update_truck("01", plate="01 A 111 AA")
+    m = db.find_match(scene["ids"][0], "01")
+    bot.handle_callback(cb(f"take:{m['id']}"))
+    dispatcher = [c["text"] for c in tg if c["method"] == "sendMessage"][0]
+    assert "не подключён" in dispatcher and "/link 01 01 A 111 AA" in dispatcher
+    assert not [chat for chat, _ in outbox if chat not in ("777",)]
+
+
+def test_link_requires_plate(scene, tg):
+    import bot
+    db.update_truck("02", plate="")
+    bot.handle_message({"message_id": 1, "chat": {"id": 9}, "from": {"id": 9},
+                        "text": "/link 2 X"})
+    assert "госномер" in [c["text"] for c in tg if c["method"] == "sendMessage"][-1]

@@ -154,7 +154,7 @@ def test_take_from_panel(client, app_env):
     m = best_match(app_env["cargo_id"])
     r = client.post(f"/match/{m['id']}/take", follow_redirects=False)
     assert r.status_code == 303
-    assert r.headers["location"] == f"/cargo/{app_env['cargo_id']}?taken=1"
+    assert r.headers["location"] == f"/cargo/{app_env['cargo_id']}?taken=1&driver=0"
 
     assert db.get_cargo(app_env["cargo_id"])["status"] == "taken"
     truck = db.get_truck(m["truck_id"])
