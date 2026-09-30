@@ -779,3 +779,16 @@ def test_every_used_emoji_exists(client):
     assert {"truck", "sparkles", "box"} <= names
     for n in names:
         assert (web.EMOJI_DIR / f"{n}.webp").is_file() and (web.EMOJI_DIR / f"{n}.png").is_file()
+
+
+def test_chat_history_keeps_take_buttons(client, app_env):
+    """Sahifa qayta ochilganda ham AI javobidagi yuklar uchun "Olaman" turadi."""
+    cid = app_env["cargo_id"]
+    m = best_match(cid)
+    db.add_ai_message(web.WEB_CHAT_ID, "user", "yuk top")
+    db.add_ai_message(web.WEB_CHAT_ID, "assistant", f"#{cid} — Toshkent → Moskva, eng yaxshisi")
+    html = client.get("/chat").text
+    assert f"/match/{m['id']}/take" in html
+    # olingandan keyin — tugma yo'q (yuk band)
+    client.post(f"/match/{m['id']}/take")
+    assert f"/match/{m['id']}/take" not in client.get("/chat").text

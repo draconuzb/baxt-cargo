@@ -1957,7 +1957,8 @@ shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
         note = "" if brain.enabled() else _note(
             "info", "AI ulanmagan — <code>.env</code> ga <code>MISTRAL_API_KEY</code> "
                     "yoki <code>GROQ_API_KEY</code> yozing. Hozircha oddiy qidiruv ishlaydi.")
-        history = "".join(_bubble(h["role"], h["content"])
+        history = "".join(_bubble(h["role"], h["content"],
+                                  _history_offers(h["content"]) if h["role"] == "assistant" else "")
                           for h in db.ai_history(WEB_CHAT_ID, limit=30, hours=72))
         if not history:
             import brain
@@ -2497,6 +2498,29 @@ addEventListener('DOMContentLoaded',function(){baxtScroll();
  var q=new URLSearchParams(location.search).get('q');
  if(q){history.replaceState(null,'','/chat');setTimeout(function(){baxtAsk(q)},60);}});
 </script>"""
+
+
+def _history_offers(content: str) -> str:
+    """Tarixdagi AI javobi uchun "Olaman" tugmalari (sahifa qayta ochilganda ham).
+
+    Javobda tilga olingan yuklar (#904) — faqat hali bo'sh va qaror
+    qilinmagan takliflari bo'lsa. Yangi moslik yaratilmaydi: tarix sahifasi
+    faqat mavjudini ko'rsatadi.
+    """
+    import brain
+    import search
+    rows = []
+    for raw in dict.fromkeys(brain._CARGO_REF.findall(content)):
+        cargo = db.get_cargo(int(raw))
+        if cargo is None or cargo["status"] != "new":
+            continue
+        open_ = [m for m in db.matches_for_cargo(int(raw)) if m["decision"] is None]
+        if open_:
+            rows.append(search.rank_offers(open_)[0]["id"])
+        if len(rows) >= 5:
+            break
+    html = "".join(_ai_offer(mid) for mid in rows)
+    return f'<div class="offers">{html}</div>' if html else ""
 
 
 def _bubble(role: str, content: str, extra: str = "") -> str:
