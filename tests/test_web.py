@@ -164,8 +164,8 @@ def test_take_from_panel(client, app_env):
 def test_take_htmx(client, app_env):
     m = best_match(app_env["cargo_id"])
     r = client.post(f"/match/{m['id']}/take", headers={"HX-Request": "true"})
-    assert r.headers["HX-Redirect"].startswith("/cargo/")
-    assert "Olindi" in r.text
+    # sahifadan chiqib ketmaydi — o'sha joyda qaysi fura olgani aniq yoziladi
+    assert "Olindi" in r.text and "Fura №" in r.text and "Bekor qilish" in r.text
 
 
 def test_panel_and_bot_share_one_claim(client, app_env):
@@ -805,3 +805,49 @@ def test_chat_cards_replace_list_lines(client, app_env):
     assert "margin $1 000" not in bubble and "Yuk: tent" not in bubble   # matn qatori ketdi
     assert bubble.index('class="offers"') < bubble.index("Eng yaxshisi")  # kartochka joyida
     assert "/take" in bubble
+
+
+
+# ---------------------------------------------------------------- qaysi fura oladi — aniq
+
+def test_take_button_shows_truck(client, app_env):
+    m = best_match(app_env["cargo_id"])
+    html = client.get("/").text
+    assert f"Olaman · №{m['truck_id']}" in html
+    assert f'hx-get="/match/{m["id"]}/alt"' in html
+
+
+def test_alternative_trucks_list(client, app_env):
+    m = best_match(app_env["cargo_id"])
+    html = client.get(f"/match/{m['id']}/alt").text
+    other = "02" if m["truck_id"] == "01" else "01"
+    assert f"№{other}" in html
+
+
+def test_take_other_truck_from_alternatives(client, app_env):
+    m = best_match(app_env["cargo_id"])
+    other = "02" if m["truck_id"] == "01" else "01"
+    client.get(f"/match/{m['id']}/alt")
+    alt = db.find_match(app_env["cargo_id"], other)
+    if alt is None:
+        pytest.skip("ikkinchi fura bu yukka mos emas")
+    r = client.post(f"/match/{alt['id']}/take",
+                    headers={"HX-Request": "true", "HX-Current-URL": "http://testserver/chat"})
+    assert f"Fura №{other}" in r.text
+    assert db.taken_truck_for_cargo(app_env["cargo_id"]) == other
+
+
+def test_take_on_home_refreshes_fleet_with_toast(client, app_env):
+    m = best_match(app_env["cargo_id"])
+    r = client.post(f"/match/{m['id']}/take",
+                    headers={"HX-Request": "true", "HX-Current-URL": "http://testserver/"})
+    assert r.headers["HX-Retarget"] == "#fleet"
+    assert "Yo'lda" in r.text and 'hx-swap-oob="true"' in r.text
+    assert f"Fura №{m['truck_id']} oldi" in r.text
+
+
+def test_cargo_page_names_truck_after_take(client, app_env):
+    m = best_match(app_env["cargo_id"])
+    client.post(f"/match/{m['id']}/take")
+    html = client.get(f"/cargo/{app_env['cargo_id']}?taken=1").text
+    assert f"Fura №{m['truck_id']} ga biriktirildi" in html

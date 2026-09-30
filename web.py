@@ -542,6 +542,23 @@ h1 .em{margin-left:6px;vertical-align:-4px}
 .road .bar{margin-top:0}
 .road .rider{position:absolute;top:-24px;transform:scaleX(-1)}
 .empty-row .em{margin-right:6px}
+/* boshqa fura tanlash */
+.alts:empty{display:none}
+.offer .alts{flex-basis:100%}
+.alts{margin-top:10px;border-radius:14px;background:var(--surface-2);padding:4px 12px}
+.alt{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:.5px solid var(--border);
+font-size:14.5px}
+.alt:first-child{border-top:0}
+.alt.off{color:var(--muted);font-size:13.5px}
+.deal.taken{background:var(--ok-bg)}
+/* qisqa xabar */
+#toast{position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));
+transform:translateX(-50%);z-index:60;pointer-events:none;width:max-content;max-width:92vw}
+.toast-msg{background:var(--surface);color:var(--text);border:.5px solid var(--border-2);
+box-shadow:var(--shadow-lg);border-radius:16px;padding:10px 16px;font-weight:600;
+animation:toastin .25s ease-out,toastout .5s ease-in 4.5s forwards}
+@keyframes toastin{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:none}}
+@keyframes toastout{to{opacity:0;transform:translateY(-10px)}}
 .money{font-weight:600;font-variant-numeric:tabular-nums}
 .money.plus{color:var(--ok)}
 #map{height:calc(100vh - 210px);min-height:440px;border-radius:var(--r);
@@ -933,7 +950,8 @@ def page(title: str, body: str, active: str = "", head: str = "",
 <title>{e(title)} — BAXT</title><link rel="icon" href="{FAVICON}">
 <style>{CSS}</style>{layout}{THEME_JS}
 <script src="https://unpkg.com/htmx.org@1.9.12" defer></script>{TG_JS}{head}</head>
-<body>{ICON_SPRITE}{menu}<main>{body}</main>{tabbar}</body></html>"""
+<body>{ICON_SPRITE}{menu}<main>{body}</main>{tabbar}
+<div id="toast" aria-live="polite"></div></body></html>"""
     return HTMLResponse(html, status_code=status_code)
 
 
@@ -997,15 +1015,89 @@ def _ring(score, small: bool = False) -> str:
             f'title="{score:.0f}/100"><span>{score:.0f}</span></div>')
 
 
-def _decision_buttons(match_id: int) -> str:
+def _decision_buttons(match_id: int, alts: bool = True) -> str:
+    """"Olaman · №04" (qaysi fura olishi tugmaning o'zida), "Boshqa fura", "O'tkazish"."""
     target = f'hx-target="#m{match_id}" hx-swap="outerHTML"'
+    m = db.get_match(match_id)
+    truck = f" · №{e(m['truck_id'])}" if m is not None else ""
+    other = (f'<button type="button" class="btn sm" title="Boshqa fura tanlash" '
+             f'style="margin-left:6px" hx-get="/match/{match_id}/alt" '
+             f'hx-target="#alt-{match_id}" hx-swap="innerHTML">{ic("truck", 15)}</button>'
+             if alts else "")
     return (f'<form method="post" action="/match/{match_id}/take" class="inline" '
             f'hx-post="/match/{match_id}/take" {target}>'
-            f'<button class="btn ok sm" title="Olaman">{ic("check", 15)} Olaman</button>'
-            f'</form>'
+            f'<button class="btn ok sm" title="Shu furaga olaman">{ic("check", 15)} '
+            f'Olaman{truck}</button></form>{other}'
             f'<form method="post" action="/match/{match_id}/skip" class="inline" '
             f'style="margin-left:6px" hx-post="/match/{match_id}/skip" {target}>'
             f'<button class="btn sm" title="O\'tkazish">{ic("skip", 15)}</button></form>')
+
+
+def _alt_trucks(match_id: int) -> str:
+    """"Boshqa fura" ro'yxati: har fura uchun hisob va o'z "Olaman" tugmasi.
+
+    Mos kelmaydigan fura ham sababi bilan ko'rinadi — dispetcher nega
+    yo'qligini bilsin ("ref kerak", "bo'sh probeg juda uzoq").
+    """
+    import ai_tools
+    m = db.get_match(match_id)
+    if m is None:
+        return '<div class="muted">Taklif topilmadi</div>'
+    row = db.get_cargo(m["cargo_id"])
+    if row is None or row["status"] != "new":
+        return '<div class="muted">Yuk allaqachon olingan</div>'
+    cargo = {k: row[k] for k in row.keys()}
+    skipped = ai_tools._skipped_pairs()
+    fit, unfit = [], []
+    for t in db.get_trucks():
+        if t["id"] == m["truck_id"]:
+            continue
+        if (cargo["id"], str(t["id"])) in skipped:
+            unfit.append((t["id"], "siz o'tkazib yuborgansiz"))
+            continue
+        r = scoring.evaluate(cargo, t)
+        if not r["ok"]:
+            unfit.append((t["id"], (r["reasons"] or ["mos emas"])[0]))
+            continue
+        mid = ai_tools._ensure_match(cargo, t["id"], r)
+        if mid:
+            fit.append((r.get("margin_usd") or 0, t, r, mid))
+    fit.sort(key=lambda x: x[0], reverse=True)
+    rows = []
+    for margin, t, r, mid in fit:
+        rows.append(
+            f'<div class="alt"><div class="grow"><b>№{e(t["id"])}</b> · {e(t["current_city"] or "—")}'
+            f'<div class="muted">bo\'sh {r["empty_km"]} km · {r["trip_days"]} kun'
+            f'{" · marja " + money(r["margin_usd"]) if r.get("margin_usd") is not None else ""}'
+            f'</div></div><form method="post" action="/match/{mid}/take" class="inline" '
+            f'hx-post="/match/{mid}/take" hx-target="#m{match_id}" hx-swap="outerHTML">'
+            f'<button class="btn ok sm">{ic("check", 15)} №{e(t["id"])}</button></form></div>')
+    for tid, why in unfit:
+        rows.append(f'<div class="alt off"><b>№{e(tid)}</b> <span class="muted">— {e(why)}</span></div>')
+    return "".join(rows) or '<div class="muted">Boshqa fura yo\'q</div>'
+
+
+def _taken_card(res, driver_ok: bool) -> str:
+    """Olgandan keyin — o'sha joyda aniq tasdiq: qaysi fura, qachon bo'shaydi, bekor qilish."""
+    c, truck_id, mid = res.cargo, res.match["truck_id"], res.match["id"]
+    driver = ("haydovchiga Telegram orqali yuborildi" if driver_ok else
+              "haydovchi botga ulanmagan — reysni o'zingiz yetkazing")
+    return f"""<div class="deal taken" id="m{mid}">
+  <div class="row1"><b>{anim("party", 22)} Olindi — Fura №{e(truck_id)}</b>
+  <span class="pill info">Yo'lda</span></div>
+  <div class="meta">#{c['id']} {e(c['from_city'])} → {e(c['to_city'])} ·
+  yuklash {e(_day_text(c.get('load_date')))} · <b>{e(_day_text(res.free_date))}</b> bo'shaydi</div>
+  <div class="meta">{e(driver)}</div>
+  <div class="acts"><form method="post" action="/trip/{mid}/undo" class="inline"
+    onsubmit="return confirm('Reys bekor qilinsinmi?')">
+    <button class="btn sm">{ic("refresh", 15)} Bekor qilish</button></form>
+    <a class="btn sm" href="/truck/{e(truck_id)}">{ic("truck", 15)} Fura №{e(truck_id)}</a></div>
+</div>"""
+
+
+def _toast(text: str) -> str:
+    """Tepada qisqa xabar (HTMX out-of-band) — javob qaysi joyga borsa ham ko'rinadi."""
+    return f'<div id="toast" hx-swap-oob="true"><div class="toast-msg">{text}</div></div>'
 
 
 _MONTHS = ["yanvar", "fevral", "mart", "aprel", "may", "iyun", "iyul", "avgust",
@@ -1099,6 +1191,7 @@ def _deal(match_id, cargo_id, route_from, route_to, per_day, meta: str,
   {right if right is not None else _per_day(per_day)}</div>
   <div class="meta">{meta}</div>
   {f'<div class="acts">{actions}</div>' if actions else ''}
+  <div class="alts" id="alt-{match_id}"></div>
 </div>"""
 
 
@@ -1420,12 +1513,26 @@ def create_app() -> FastAPI:
             log.exception("Telegramga tasdiq yuborilmadi")
 
         url = f"/cargo/{res.cargo['id']}?taken=1&driver={1 if driver_ok else 0}"
-        if _is_htmx(request):
-            return HTMLResponse(
-                f'<div class="offer done" id="m{match_id}">'
-                f'{ic("check", 15)} Olindi</div>',
-                headers={"HX-Redirect": url})
-        return _redirect(url)
+        if not _is_htmx(request):
+            return _redirect(url)
+        toast = _toast(f'{anim("party", 20)} Fura №{e(truck_id)} oldi: '
+                       f'{e(res.cargo["from_city"])} → {e(res.cargo["to_city"])}')
+        path = urlparse(request.headers.get("hx-current-url", "")).path
+        if path == "/":
+            # Bosh sahifa: butun park yangilanadi — fura "Yo'lda" bo'lib ko'rinadi
+            return HTMLResponse(_fleet_cards() + toast,
+                                headers={"HX-Retarget": "#fleet", "HX-Reswap": "innerHTML"})
+        if path.startswith("/cargo/"):
+            return HTMLResponse("", headers={"HX-Redirect": url})
+        if path.startswith("/truck/"):
+            return HTMLResponse("", headers={"HX-Refresh": "true"})
+        # AI chat, qidiruv, yuklar — o'sha joyda aniq tasdiq
+        return HTMLResponse(_taken_card(res, driver_ok) + toast)
+
+    @app.get("/match/{match_id}/alt")
+    async def match_alternatives(match_id: int):
+        from starlette.concurrency import run_in_threadpool
+        return HTMLResponse(await run_in_threadpool(_alt_trucks, match_id))
 
     @app.post("/match/{match_id}/skip")
     async def skip(match_id: int, request: Request):
@@ -1592,7 +1699,9 @@ def create_app() -> FastAPI:
         matches = db.matches_for_cargo(cargo_id)
         notes = ""
         if taken:
-            said = ("Haydovchiga Telegram orqali yuborildi." if driver == "1" else
+            holder = db.taken_truck_for_cargo(cargo_id)
+            said = (f"Fura №{e(holder)} ga biriktirildi. " if holder else "") + \
+                ("Haydovchiga Telegram orqali yuborildi." if driver == "1" else
                     "Haydovchi botga ulanmagan — reysni o'zingiz yetkazing (Park → fura → "
                     "Telegram qatorida qanday ulash yozilgan).")
             notes = _note("ok", f'{anim("party", 24)} Reys biriktirildi. {said}')
@@ -1631,7 +1740,7 @@ def create_app() -> FastAPI:
         deals = []
         for m in matches:
             d = _details(m)
-            action = _decision_buttons(m["id"]) if c["status"] == "new" and not m["decision"] \
+            action = _decision_buttons(m["id"], alts=False) if c["status"] == "new" and not m["decision"] \
                 else f'<span class="pill">{e(DECISION.get(m["decision"], m["decision"] or ""))}</span>'
             meta = (f'<span class="tnum">№{e(m["truck_id"])}</span> · bo\'sh {m["empty_km"]:.0f} + '
                     f'yuk {m["loaded_km"]:.0f} km · {d.get("trip_days", "—")} kun<br>'
@@ -2621,7 +2730,8 @@ def _ai_offer(match_id: int) -> str:
   <div class="grow"><a class="route" href="/cargo/{c['id']}">#{c['id']} {e(c['from_city'])} → {e(c['to_city'])}</a>
   <div class="muted">{price_txt} · №{e(m['truck_id'])}{margin}</div>
   <div class="muted">{e(facts)}</div></div>
-  <div class="act">{_decision_buttons(match_id)}</div></div>"""
+  <div class="act">{_decision_buttons(match_id)}</div>
+  <div class="alts" id="alt-{match_id}"></div></div>"""
 
 
 _EFFECT_LOOK = {"block": ("ban", "bad"), "penalty": ("warning", "warn"), "boost": ("check", "ok")}
