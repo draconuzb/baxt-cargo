@@ -357,7 +357,8 @@ def test_plain_text_is_a_search(scene, tg):
     bot.handle_message(message("Тошкент Москва"))
     text = tg.texts()[0]
     assert "Toshkent → Moskva" in text
-    assert "маржа" in text and "/день" in text
+    assert "маржа" in text and "4 000" in text          # narx ko'rinadi
+    assert "/день" not in text                           # buyurtmachi: kunlik marja kerak emas
 
 
 def test_search_command(scene, tg):

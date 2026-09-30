@@ -4,9 +4,9 @@ insight.py — "nega aynan shu yuk?" izohi (aqlli bildirishnoma).
 Kartochka faqat raqam bermasin, qarorni tushuntirsin:
 
     Почему этот груз:
-    🏆 №01 — лучший вариант (у №02 было бы $180/день)
+    🏆 №01 — лучший вариант (у №02 маржа была бы $900)
     📈 Ставка выше рынка на 12%
-    🔁 Обратно есть: Almaty → Toshkent #9 · круг $265/день
+    🔁 Обратно есть: Almaty → Toshkent #9 · круг $3 100
     📜 +10 qoida #3: …
 
 Hammasi **dasturda** hisoblanadi (model chaqirilmaydi): listener har bir
@@ -52,7 +52,7 @@ def _explain(cargo: dict, result: dict, others: list[dict], with_return: bool) -
         best_alt = max(alt, key=lambda r: r["margin_per_day"])
         if best_alt["margin_per_day"] < per_day:
             lines.append(f"🏆 №{truck_id} — лучший вариант (у №{best_alt['truck_id']} "
-                         f"было бы {_money(best_alt['margin_per_day'])}/день)")
+                         f"маржа была бы {_money(best_alt.get('margin_usd'))})")
     elif per_day is not None and not alt and others:
         lines.append(f"🏆 Подходит только №{truck_id}")
 
@@ -83,7 +83,7 @@ def _explain(cargo: dict, result: dict, others: list[dict], with_return: bool) -
             if chains:
                 b = chains[0]["back_cargo"]
                 lines.append(f"🔁 Обратно есть: {b.get('from_city')} → {b.get('to_city')} "
-                             f"#{b.get('id')} · круг {_money(chains[0]['margin_per_day'])}/день")
+                             f"#{b.get('id')} · круг {_money(chains[0]['total_margin_usd'])}")
             elif cargo.get("to_city"):
                 lines.append(f"🔁 Из {cargo['to_city']} обратного груза пока нет")
 

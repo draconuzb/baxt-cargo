@@ -353,7 +353,7 @@ def test_search_finds_cargo(client):
     html = client.get("/search?q=Ташкент Москва").text
     assert "Toshkent → Moskva" in html
     assert "№01" in html or "№02" in html          # park bo'yicha hisoblangan
-    assert "Kuniga" in html
+    assert "4 000" in html and "/kun" not in html          # narx yashil, kunlik marja yo'q
 
 
 def test_search_nothing_found_offers_watch(client):

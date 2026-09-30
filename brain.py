@@ -109,8 +109,9 @@ to the cargo owner inside <code>…</code> so it is easy to copy.
 facts, cargos or trucks. Don't write "✅ Беру" yourself.
 - Reply in the user's language AND alphabet: Uzbek Latin -> Uzbek Latin, Uzbek Cyrillic -> \
 Uzbek Cyrillic, Russian -> Russian. Be short and \
-practical: at most ~5 cargos, each on 2–3 lines: route, date, truck, empty km, margin and \
-margin/day, rate. Telegram HTML only: <b>, <i>, <code>. No markdown, no tables."""
+practical: at most ~5 cargos, each on 2–3 lines: route, date, truck, PRICE (rate, as \
+written in the ad), empty km, margin. Do NOT show margin per day — the owner does not want it \
+(still use it to decide which cargo is best). Telegram HTML only: <b>, <i>, <code>. No markdown, no tables."""
 
 
 # ---------------------------------------------------------------- sozlama

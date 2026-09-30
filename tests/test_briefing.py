@@ -60,7 +60,7 @@ def test_build_has_plan_and_buttons(scene):
     text, keyboard = briefing.build(MORNING_UTC, with_ai=False)
     assert "План на 30 сентября" in text
     assert "№01" in text and "№02" in text
-    assert "/день" in text
+    assert "💵" in text and "/день" not in text          # narx bor, kunlik marja yo'q
     assert "→" in text and "-&gt;" not in text
     assert keyboard["inline_keyboard"][0][0]["callback_data"].startswith("take:")
 

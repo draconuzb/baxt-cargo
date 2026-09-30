@@ -1043,10 +1043,38 @@ def _free_text(value) -> str:
     return f"{_day_text(d)} bo'shaydi"
 
 
+def _price_short(row) -> str | None:
+    """Yuk narxi asl valyutada, qisqa: "$5 000", "55 mln so'm", "400 000 ₽"."""
+    rate, cur = row["rate"], row["currency"]
+    if not rate or not cur:
+        return None
+    if cur == "USD":
+        return money(rate)
+    if cur == "UZS":
+        return f"{rate / 1_000_000:g} mln so'm"
+    if cur == "RUB":
+        return f"{rate:,.0f} ₽".replace(",", " ")
+    return f"{rate:,.0f} {cur}".replace(",", " ")
+
+
+def _price_big(row) -> str:
+    """Taklifning o'ng tomonidagi katta yashil raqam — yuk narxi (buyurtmachi talabi).
+
+    Narx yozilmagan bo'lsa — qancha so'rash kerakligi (to'q sariq)."""
+    price = _price_short(row)
+    if price:
+        return f'<div class="pd">{e(price)}</div>'
+    ask = _ask_price(_details(row)) if "details" in row.keys() else None
+    if ask:
+        return f'<div class="pd ask">≥ {money(ask)}<small> so\'rang</small></div>'
+    return '<div class="pd none">narx yo\'q</div>'
+
+
 def _per_day(value) -> str:
+    """Eski nom — endi marja (kunlik emas) ko'rsatiladi."""
     if value is None:
-        return '<div class="pd none">stavka yo\'q</div>'
-    return f'<div class="pd">{money(value)}<small>/kun</small></div>'
+        return '<div class="pd none">narx yo\'q</div>'
+    return f'<div class="pd">{money(value)}</div>'
 
 
 def _ask_price(d: dict) -> int | None:
@@ -1073,21 +1101,17 @@ def _deal(match_id, cargo_id, route_from, route_to, per_day, meta: str,
 
 
 def _offer(row) -> str:
-    """Taklif. Narx bor — kuniga qancha qoldiradi; narx yo'q — qancha so'rash kerak."""
+    """Taklif: o'ngda yuk NARXI (yashil); pastda marja, bo'sh probeg, sana, kunlar."""
     d = _details(row)
-    per_day = d.get("margin_per_day")
     when = e(_day_text(row["load_date"]))
     empty = f"bo'sh {row['empty_km']:.0f} km"
-    if per_day is None:
-        ask = _ask_price(d)
-        right = (f'<div class="pd ask">≥ {money(ask)}<small> so\'rang</small></div>'
-                 if ask else '<div class="pd none">narx yo\'q</div>')
-        meta = f"narxi yozilmagan · {empty} · {when} · {d.get('trip_days', '—')} kun"
-        return _deal(row["id"], row["cargo_id"], row["from_city"], row["to_city"],
-                     None, meta, _decision_buttons(row["id"]), right=right)
-    meta = f"marja {money(row['margin_usd'])} · {empty} · {when} · {d.get('trip_days', '—')} kun"
+    days = d.get("trip_days", "—")
+    if row["margin_usd"] is None:
+        meta = f"narxi yozilmagan · {empty} · {when} · {days} kun"
+    else:
+        meta = f"marja {money(row['margin_usd'])} · {empty} · {when} · {days} kun"
     return _deal(row["id"], row["cargo_id"], row["from_city"], row["to_city"],
-                 per_day, meta, _decision_buttons(row["id"]))
+                 None, meta, _decision_buttons(row["id"]), right=_price_big(row))
 
 
 def _rank_offers(rows) -> list:
@@ -1359,7 +1383,7 @@ def create_app() -> FastAPI:
                         f'{urlencode({"q": "Har furaga yuk va qaytish yukini rejalab ber"})}">'
                         f'{ic("spark", 14)} Reja</a>')
                     + kpi_html
-                    + '<h2 class="sec">Furalar <small>kunlik marja bo\'yicha</small></h2>'
+                    + '<h2 class="sec">Furalar <small>eng foydalisi yuqorida</small></h2>'
                     + f"""<div class="grid fade" id="fleet"
      hx-get="/fragment/fleet" hx-trigger="every 45s"
      hx-swap="innerHTML">{_fleet_cards()}</div>""", active="/")
@@ -1612,10 +1636,10 @@ def create_app() -> FastAPI:
                     f'xarajat {money(d.get("total_cost"))} · marja '
                     f'<span class="money">{money(m["margin_usd"])}</span> · ball {m["score"]:.0f}')
             deals.append(f"""<div class="deal" id="m{m['id']}">
-  <div class="row1"><b>Fura №{e(m['truck_id'])}</b>{_per_day(d.get('margin_per_day'))}</div>
+  <div class="row1"><b>Fura №{e(m['truck_id'])}</b>{_per_day(m['margin_usd'])}</div>
   <div class="meta">{meta}</div><div class="acts">{action}</div></div>""")
         match_table = (f'<h2 class="sec">Furalar bo\'yicha hisob '
-                       f'<small>kunlik marja</small></h2>'
+                       f'<small>marja — foyda</small></h2>'
                        + (f'<div class="list">{"".join(deals)}</div>' if deals else
                           _empty("Bu yukni birorta fura ko'tara olmaydi", "ban")))
 
@@ -2111,9 +2135,10 @@ def _search_results(found: dict, text: str) -> str:
                 f'marja {money(r["margin_usd"])} · {e(_day_text(c.get("load_date")))}'
                 f'<br>{_cargo_line(c)}')
         deals.append(_deal(match["id"] if match else f"c{c['id']}", c["id"],
-                           c["from_city"], c["to_city"], r["margin_per_day"], meta, actions))
+                           c["from_city"], c["to_city"], None, meta, actions,
+                           right=_price_big(c)))
     return f"""<h2 class="sec">Topildi: {len(deals)} ta
-<small>Kuniga marja bo'yicha · {found['scanned']} yukdan, {found['trucks']} fura</small></h2>
+<small>eng foydalisi yuqorida · {found['scanned']} yukdan, {found['trucks']} fura</small></h2>
 <div class="list">{''.join(deals)}</div>
 <p>{_watch_button(text)}</p>"""
 
@@ -2177,14 +2202,14 @@ def _return_block(cargo, matches) -> str:
   <td><a class="route" href="/cargo/{back['id']}">{e(back['from_city'])} → {e(back['to_city'])}</a></td>
   <td class="num">{r['empty_km']} km</td>
   <td class="r"><span class="money plus">{money(r['margin_usd'])}</span></td>
-  <td class="r">{money(r['margin_per_day'])}/kun</td>
+  <td class="r">{e(_price_short(back) or '—')}</td>
   <td>{e(back['load_date'] or '—')}</td>
 </tr>""")
     return f"""<h2>Qaytish yuki · mashina №{e(truck['id'])} · {e(truck['current_city'])}dan
 (bo'shaydi {e(truck['free_date'])})</h2>
 <div class="table-wrap"><table>
 <thead><tr><th>Ball</th><th>Yo'nalish</th><th>Bo'sh</th>
-<th style="text-align:right">Marja</th><th style="text-align:right">Kuniga</th>
+<th style="text-align:right">Marja</th><th style="text-align:right">Narx</th>
 <th>Yuklash</th></tr></thead>
 <tbody>{''.join(lines)}</tbody></table></div>"""
 
@@ -2410,7 +2435,7 @@ def _truck_page(truck_id: str, note: str = "", open_edit: bool = False,
             + ('<h2 class="sec">Hozirgi reys</h2><div class="card tcard">'
                + "".join(_trip_block(t) for t in on_trip) + '</div>' if on_trip else '')
             + f'<h2 class="sec">{"Keyingi yuk" if on_trip else "Takliflar"} '
-              f'<small>kunlik marja bo\'yicha</small></h2>'
+              f'<small>eng foydalisi yuqorida</small></h2>'
             + offers
             + '<h2 class="sec">Reyslar tarixi</h2>'
             + (f'<div class="list">{trips}</div>' if trips else _empty("Hali reys yo'q", "receipt"))
@@ -2517,12 +2542,13 @@ def _ai_offer(match_id: int) -> str:
     c = db.get_cargo(m["cargo_id"])
     if c is None:
         return ""
-    d = _details(m)
-    per_day = d.get("margin_per_day")
-    per_day_txt = f" · {money(per_day)}/kun" if per_day is not None else ""
+    price = _price_short(c)
+    price_txt = (f'<span class="money plus">{e(price)}</span>' if price
+                 else "narx yozilmagan")
+    margin = f" · marja {money(m['margin_usd'])}" if m["margin_usd"] is not None else ""
     return f"""<div class="offer" id="m{match_id}">
   <div class="grow"><a class="route" href="/cargo/{c['id']}">#{c['id']} {e(c['from_city'])} → {e(c['to_city'])}</a>
-  <div class="muted">№{e(m['truck_id'])} · <span class="money">{money(m['margin_usd'])}</span>{per_day_txt}</div></div>
+  <div class="muted">{price_txt} · №{e(m['truck_id'])}{margin}</div></div>
   <div class="act">{_decision_buttons(match_id)}</div></div>"""
 
 

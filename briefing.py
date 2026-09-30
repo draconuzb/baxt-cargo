@@ -3,8 +3,8 @@ briefing.py — ertalabki reja: har kuni belgilangan soatda bot o'zi yozadi.
 
     ☀️ Доброе утро! План на 30 сентября
     За сутки: 45 грузов · взято 2 рейса · маржа $3 100
-    🚛 №01 · Toshkent → Toshkent → Almaty #4 · $459/день
-       🔁 обратно: Almaty → Toshkent #9 · круг $265/день
+    🚛 №01 · Toshkent → Almaty #4 · 💵 $1 800 · маржа $1 251
+       🔁 обратно: Almaty → Toshkent #9 · 💵 $1 500
     💡 Совет: ...
     [✅ Беру #4 → №01]
 
@@ -83,17 +83,18 @@ def build(now_utc: datetime | None = None, with_ai: bool = True) -> tuple[str, d
         if "cargo_id" not in p:
             lines.append(f"\n🚛 <b>№{truck}</b> · {at} — подходящего груза пока нет")
             continue
-        per_day = p.get("margin_per_day")
+        price = p.get("rate")
         lines.append(
             f"\n🚛 <b>№{truck}</b> · {at}"
             f"\n   → <b>{notifier.escape(_arrow(p['route']))}</b> #{p['cargo_id']}"
             f" · {notifier.escape(p.get('date') or 'дата не указана')}"
-            f"\n   пустой {p.get('empty_km', 0)} км · маржа {notifier.money(p.get('margin_usd'))}"
-            + (f" · <b>{notifier.money(per_day)}/день</b>" if per_day is not None else ""))
+            + (f" · 💵 <b>{notifier.escape(price)}</b>" if price else " · цена не указана")
+            + f"\n   пустой {p.get('empty_km', 0)} км · маржа {notifier.money(p.get('margin_usd'))}")
         back = p.get("return")
         if isinstance(back, dict):
-            lines.append(f"   🔁 обратно: {notifier.escape(_arrow(back['route']))} #{back['cargo_id']}"
-                         f" · круг {notifier.money(p.get('round_margin_per_day'))}/день")
+            back_price = f" · 💵 {notifier.escape(back['rate'])}" if back.get("rate") else ""
+            lines.append(f"   🔁 обратно: {notifier.escape(_arrow(back['route']))} "
+                         f"#{back['cargo_id']}{back_price}")
         else:
             lines.append("   🔁 обратного груза пока нет")
 

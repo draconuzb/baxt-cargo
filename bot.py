@@ -362,7 +362,7 @@ HELP = """🚛 <b>BAXT TRANSPORT — диспетчер</b>
 • <code>12-юкка қанча сўрайлик?</code> — цена и готовый текст владельцу
 🎙 Можно <b>голосом</b> — просто отправьте голосовое сообщение.
 
-Я считаю по нашим машинам и советую то, что выгоднее <b>за день</b>
+Я считаю по нашим машинам и советую самое выгодное — с учётом пустого пробега
 (не самое дорогое). Груз берёте вы — кнопкой «✅ Беру».
 
 <b>Кнопки внизу:</b>
@@ -389,7 +389,7 @@ HELP = """🚛 <b>BAXT TRANSPORT — диспетчер</b>
 WELCOME = """👋 <b>Добро пожаловать в BAXT TRANSPORT!</b>
 
 Я помогаю найти самый выгодный груз для наших машин —
-не самый дорогой, а тот, что приносит больше <b>за день</b>.
+не самый дорогой, а самый выгодный с учётом пустого пробега и дней в пути.
 
 Напишите направление, например <code>Ташкент Москва</code>,
 или пользуйтесь кнопками внизу 👇"""
@@ -777,7 +777,7 @@ def cmd_brief(chat_id, args: list[str]) -> None:
 def format_plan(plan: list[dict]) -> str:
     if not plan:
         return "🧠 Нет активных машин — проверьте парк."
-    lines = ["🧠 <b>План по машинам</b> (груз + обратный, по марже за день)"]
+    lines = ["🧠 <b>План по машинам</b> (груз + обратный)"]
     for p in plan:
         if "cargo_id" not in p:
             lines.append(f"\n<b>№{notifier.escape(p['truck'])}</b> "
@@ -792,7 +792,7 @@ def format_plan(plan: list[dict]) -> str:
             f"\n   {notifier.escape(p.get('date') or 'дата не указана')} · "
             f"пустой {p.get('empty_km', 0)} км · маржа {notifier.money(p.get('margin_usd'))}"
             f"{back_txt}"
-            f"\n   круг: <b>{notifier.money(p.get('round_margin_per_day'))}/день</b>")
+            + (f"\n   💵 <b>{notifier.escape(p['rate'])}</b>" if p.get("rate") else ""))
     return "\n".join(lines)
 
 

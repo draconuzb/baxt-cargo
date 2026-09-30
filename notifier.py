@@ -39,6 +39,21 @@ def money(v, cur="$") -> str:
     return f"{cur}{v:,.0f}".replace(",", " ") if v is not None else "—"
 
 
+def price_text(cargo) -> str | None:
+    """Yuk narxi asl valyutada: "5 000 $", "55 млн сум", "400 000 ₽" (yo'q bo'lsa None)."""
+    c = dict(cargo) if not isinstance(cargo, dict) else cargo
+    rate, cur = c.get("rate"), c.get("currency")
+    if not rate or not cur:
+        return None
+    if cur == "USD":
+        return money(rate)
+    if cur == "UZS":
+        return f"{rate / 1_000_000:g} млн сум"
+    if cur == "RUB":
+        return f"{rate:,.0f} ₽".replace(",", " ")
+    return f"{rate:,.0f} {cur}".replace(",", " ")
+
+
 def format_card(cargo: dict, result: dict, insight: list[str] | None = None) -> str:
     """Spec dagi kartochka ko'rinishi + marja qo'shilgan.
 
@@ -61,7 +76,7 @@ def format_card(cargo: dict, result: dict, insight: list[str] | None = None) -> 
     lines = [
         "🔥 <b>НОВЫЙ ГРУЗ</b>",
         f"<b>{cargo.get('from_city')} → {cargo.get('to_city')}</b>",
-        f"{rate}",
+        f"💵 <b>{rate}</b>",
         f"{body}{temp} · {weight}" + (f" · {cargo['load_date']}" if cargo.get("load_date") else ""),
         "",
         f"🚛 <b>Машина №{result['truck_id']}</b> — пустой пробег {result['empty_km']} км",
@@ -75,8 +90,7 @@ def format_card(cargo: dict, result: dict, insight: list[str] | None = None) -> 
         f"💸 Расходы: {money(result['total_cost'])} · Выручка: {money(result['revenue_usd'])}",
     ]
     if result.get("margin_usd") is not None:
-        lines.append(f"💰 <b>Маржа: {money(result['margin_usd'])}</b> "
-                     f"({money(result['margin_per_day'])}/день)")
+        lines.append(f"💰 Маржа: <b>{money(result['margin_usd'])}</b>")
     for w in result.get("warnings", []):
         lines.append(f"⚠️ {w}")
     if insight:
@@ -272,7 +286,7 @@ def format_details(cargo: dict, result: dict | None = None) -> str:
         ]
         if result.get("margin_usd") is not None:
             lines.append(f"💰 <b>маржа {money(result['margin_usd'])}</b> "
-                         f"({money(result.get('margin_per_day'))}/день)")
+                         )
         if result.get("arrival_date"):
             lines.append(f"📅 машина на погрузке: {result['arrival_date']}")
 
@@ -385,15 +399,14 @@ def format_search(found: dict) -> str:
         body = _BODY_NAME.get(c.get("body_type"), c.get("body_type") or "—")
         temp = f" {c['temp_c']:+.0f}°" if c.get("temp_c") is not None else ""
         weight = f"{c['weight_t']:g} т" if c.get("weight_t") else "вес не указан"
-        per_day = (f" · <b>{money(r['margin_per_day'])}/день</b>"
-                   if r["margin_per_day"] is not None else "")
+        price = price_text(c)
         lines.append(
-            f"\n{i}. <b>{escape(c['from_city'])} → {escape(c['to_city'])}</b> "
-            f"{_icon(r['score'])} {r['score']:.0f}/100"
-            f"\n   {body}{temp} · {weight} · {escape(c.get('load_date') or 'дата не указана')}"
+            f"\n{i}. <b>{escape(c['from_city'])} → {escape(c['to_city'])}</b>"
+            + (f" · 💵 <b>{escape(price)}</b>" if price else " · цена не указана")
+            + f"\n   {body}{temp} · {weight} · {escape(c.get('load_date') or 'дата не указана')}"
             f"\n   🚛 №{escape(r['truck_id'])} · пустой {r['empty_km']:.0f} км · "
             f"{r['trip_days']} дн."
-            f"\n   💰 маржа {money(r['margin_usd'])}{per_day}"
+            f"\n   💰 маржа {money(r['margin_usd'])}"
             + (f"\n   📞 {escape(c['phone'])}" if c.get("phone") else "")
             + f"\n   /cargo_{c['id']}")
     return "\n".join(lines)
@@ -468,7 +481,7 @@ def format_price(adv: dict) -> str:
              f"↘️ Ниже не уступать: {money(adv['floor_usd'])}{uzs('floor_uzs_mln')}",
              f"⚖️ В ноль (наши расходы): {money(adv['break_even_usd'])}",
              f"📌 Наша цель: {money(adv['target_usd'])} "
-             f"({money(adv['target_margin_per_day'])}/день)"]
+             ]
     m = adv.get("market") or {}
     if m.get("median_usd"):
         lines.append(f"📊 Рынок за 30 дн.: медиана {money(m['median_usd'])} "
@@ -501,8 +514,7 @@ def format_roundtrip(cargo: dict, chains: list[dict]) -> str:
         lines.append(
             f"\n{i}. <b>{b.get('from_city')} → {b.get('to_city')}</b> — "
             f"{money(ch['leg2'].get('margin_usd'))}"
-            f"\n   круг: {money(ch['total_margin_usd'])} за {ch['total_days']} дн. "
-            f"= <b>{money(ch['margin_per_day'])}/день</b>"
+            f"\n   круг: <b>{money(ch['total_margin_usd'])}</b> за {ch['total_days']} дн."
             f"\n   пустой пробег в круге: {ch['empty_km']} км · груз #{b.get('id')}"
             + (f" · 📞 {b['phone']}" if b.get("phone") else ""))
     lines.append("\n<i>Это оценка: груз может уйти, пока машина в пути.</i>")

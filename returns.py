@@ -55,12 +55,10 @@ def format_reminder(truck, trip, offers) -> str:
     if not offers:
         lines.append("Обратного груза пока нет — слежу и сразу сообщу, как появится.")
         return "\n".join(lines)
-    lines.append("Лучший обратный груз (по марже за день):")
+    lines.append("Лучший обратный груз:")
     for i, o in enumerate(offers, 1):
-        d = search.details(o)
-        per_day = d.get("margin_per_day")
-        money = (f"{notifier.money(per_day)}/день" if per_day is not None
-                 else "цена не указана")
+        price = notifier.price_text(o)
+        money = f"💵 {price}" if price else "цена не указана"
         lines.append(f"\n{i}. <b>{notifier.escape(o['from_city'])} → "
                      f"{notifier.escape(o['to_city'])}</b> · {money}"
                      f"\n   пустой {o['empty_km']:.0f} км · груз #{o['cargo_id']}")

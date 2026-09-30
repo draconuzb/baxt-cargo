@@ -44,8 +44,9 @@ RESULT = {
 def test_card_has_key_numbers():
     card = notifier.format_card(CARGO, RESULT)
     for piece in ("Toshkent → Moskva", "42.0 млн сум", "Реф", "-18°C", "20 т",
-                  "Машина №01", "88/100", "Маржа", "$1 381", "$153"):
+                  "Машина №01", "88/100", "Маржа", "$1 381", "💵"):
         assert piece in card, f"kartochkada yo'q: {piece}"
+    assert "/день" not in card                          # buyurtmachi talabi
 
 
 def test_card_shows_usd_equivalent():
@@ -120,7 +121,7 @@ def test_roundtrip_message():
     }]
     text = notifier.format_roundtrip(CARGO, chains)
     assert "Moskva → Toshkent" in text
-    assert "$143/день" in text
+    assert "$2 581" in text and "/день" not in text
     assert "+79001112233" in text
 
 
