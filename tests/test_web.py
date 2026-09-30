@@ -792,3 +792,16 @@ def test_chat_history_keeps_take_buttons(client, app_env):
     # olingandan keyin — tugma yo'q (yuk band)
     client.post(f"/match/{m['id']}/take")
     assert f"/match/{m['id']}/take" not in client.get("/chat").text
+
+
+def test_chat_cards_replace_list_lines(client, app_env):
+    """Yuk AI matnida ham, kartochkada ham takrorlanmasin — kartochka qatorning o'rnida."""
+    cid = app_env["cargo_id"]
+    db.add_ai_message(web.WEB_CHAT_ID, "assistant",
+                      f"Topildi:\n\n**#{cid}** — Toshkent → Moskva, 20t, margin $1 000\n"
+                      f"   Yuk: tent\n\nEng yaxshisi #{cid}.")
+    html = client.get("/chat").text
+    bubble = html[html.index("Topildi:"):]
+    assert "margin $1 000" not in bubble and "Yuk: tent" not in bubble   # matn qatori ketdi
+    assert bubble.index('class="offers"') < bubble.index("Eng yaxshisi")  # kartochka joyida
+    assert "/take" in bubble

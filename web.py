@@ -40,6 +40,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import time
 from datetime import date, datetime
 from html import escape
@@ -583,7 +584,8 @@ border-bottom-right-radius:6px}
 .bubble.ai{align-self:flex-start;background:var(--surface);border:.5px solid var(--border);
 box-shadow:var(--shadow);border-bottom-left-radius:6px}
 .bubble.ai code{background:var(--surface-3);padding:1px 5px;border-radius:6px}
-.bubble .offers{margin-top:8px;white-space:normal}
+.bubble .offers{margin:6px 0;white-space:normal}
+.bubble.ai p{margin:0}
 .bubble .offer{padding:9px 0}
 .dock{position:sticky;bottom:0;max-width:780px;padding:8px 0 12px;
 background:linear-gradient(transparent,var(--bg) 18px)}
@@ -1957,9 +1959,11 @@ shu yo'nalishning o'z stavkasi ishlatiladi.</p>"""
         note = "" if brain.enabled() else _note(
             "info", "AI ulanmagan — <code>.env</code> ga <code>MISTRAL_API_KEY</code> "
                     "yoki <code>GROQ_API_KEY</code> yozing. Hozircha oddiy qidiruv ishlaydi.")
-        history = "".join(_bubble(h["role"], h["content"],
-                                  _history_offers(h["content"]) if h["role"] == "assistant" else "")
-                          for h in db.ai_history(WEB_CHAT_ID, limit=30, hours=72))
+        history = "".join(
+            (f'<div class="bubble ai fade">'
+             f'{_merge_offers(h["content"], _history_offer_ids(h["content"]))}</div>')
+            if h["role"] == "assistant" else _bubble(h["role"], h["content"])
+            for h in db.ai_history(WEB_CHAT_ID, limit=30, hours=72))
         if not history:
             import brain
             history = (f'<div class="bubble ai fade">{anim("wave", 28)} '
@@ -2500,7 +2504,7 @@ addEventListener('DOMContentLoaded',function(){baxtScroll();
 </script>"""
 
 
-def _history_offers(content: str) -> str:
+def _history_offer_ids(content: str) -> list[int]:
     """Tarixdagi AI javobi uchun "Olaman" tugmalari (sahifa qayta ochilganda ham).
 
     Javobda tilga olingan yuklar (#904) — faqat hali bo'sh va qaror
@@ -2519,8 +2523,48 @@ def _history_offers(content: str) -> str:
             rows.append(search.rank_offers(open_)[0]["id"])
         if len(rows) >= 5:
             break
-    html = "".join(_ai_offer(mid) for mid in rows)
-    return f'<div class="offers">{html}</div>' if html else ""
+    return rows
+
+
+# AI javobidagi yuk qatori: "#904 — ...", "**#904** — ...", "1. #904 ...", "• #904 ..."
+_CARGO_LINE = re.compile(r"^\s*(?:\d+[.)]\s*|[-•*]\s*)?(?:\*\*|<b>)?#(\d+)")
+
+
+def _merge_offers(raw: str, match_ids: list[int]) -> str:
+    """AI matni + kartochkalar BITTA ro'yxat bo'lib.
+
+    Kartochkasi bor yukning matndagi qatori (va uning davomi) olib tashlanadi,
+    kartochkalar o'sha joyga qo'yiladi — ro'yxat ikki marta chiqmaydi.
+    """
+    import brain
+    cards: dict[int, str] = {}
+    for mid in match_ids:
+        m = db.get_match(mid)
+        if m is not None and m["cargo_id"] not in cards:
+            cards[m["cargo_id"]] = _ai_offer(mid)
+    if not cards:
+        return brain.to_telegram_html(raw)
+
+    kept, placed, skipping = [], False, False
+    for line in raw.splitlines():
+        hit = _CARGO_LINE.match(line)
+        if hit and int(hit.group(1)) in cards:
+            if not placed:
+                kept.append("@@CARDS@@")
+                placed = True
+            skipping = True
+            continue
+        if skipping and line.strip() and (line[:1].isspace() or line.lstrip()[:1] in "•-"):
+            continue                        # yuk qatorining davomi ("   Yuk: 18t ...")
+        skipping = False
+        kept.append(line)
+    if not placed:
+        kept.append("@@CARDS@@")
+    html = brain.to_telegram_html("\n".join(kept))
+    block = f'</p><div class="offers">{"".join(cards.values())}</div><p>'
+    html = html.replace("@@CARDS@@", block)
+    html = re.sub(r"\n*</p>", "</p>", re.sub(r"<p>\n*", "<p>", f"<p>{html}</p>"))
+    return html.replace("<p></p>", "")
 
 
 def _bubble(role: str, content: str, extra: str = "") -> str:
@@ -2549,14 +2593,10 @@ def _chat_answer(text: str) -> str:
             return _bubble("assistant", "AI hozir javob bera olmadi. Shahar nomlari bilan "
                                         "yozib ko'ring: Toshkent Moskva")
         return f'<div class="bubble ai fade">{_search_results(search.find(query), text)}</div>'
-    offers = ""
-    for row in (res.keyboard or {}).get("inline_keyboard", []):
-        data = row[0].get("callback_data", "")
-        if data.startswith("take:"):
-            offers += _ai_offer(int(data.split(":")[1]))
-    if offers:
-        offers = f'<div class="offers">{offers}</div>'
-    return f'<div class="bubble ai fade">{res.text}{offers}</div>'
+    ids = [int(row[0]["callback_data"].split(":")[1])
+           for row in (res.keyboard or {}).get("inline_keyboard", [])
+           if row[0].get("callback_data", "").startswith("take:")]
+    return f'<div class="bubble ai fade">{_merge_offers(res.raw or res.text, ids)}</div>'
 
 
 def _ai_offer(match_id: int) -> str:
@@ -2570,9 +2610,17 @@ def _ai_offer(match_id: int) -> str:
     price_txt = (f'<span class="money plus">{e(price)}</span>' if price
                  else "narx yozilmagan")
     margin = f" · marja {money(m['margin_usd'])}" if m["margin_usd"] is not None else ""
+    d = _details(m)
+    body = BODY.get(c["body_type"], c["body_type"] or "")
+    load = " ".join(x for x in (f"{c['weight_t']:g} t" if c["weight_t"] else "", body) if x)
+    facts = " · ".join(x for x in (
+        load, f"bo'sh {m['empty_km']:.0f} km" if m["empty_km"] is not None else "",
+        f"{d['trip_days']} kun" if d.get("trip_days") else "",
+        _day_text(c["load_date"]) if c["load_date"] else "") if x)
     return f"""<div class="offer" id="m{match_id}">
   <div class="grow"><a class="route" href="/cargo/{c['id']}">#{c['id']} {e(c['from_city'])} → {e(c['to_city'])}</a>
-  <div class="muted">{price_txt} · №{e(m['truck_id'])}{margin}</div></div>
+  <div class="muted">{price_txt} · №{e(m['truck_id'])}{margin}</div>
+  <div class="muted">{e(facts)}</div></div>
   <div class="act">{_decision_buttons(match_id)}</div></div>"""
 
 
