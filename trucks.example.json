@@ -1,0 +1,32 @@
+[
+  {
+    "id": "01",
+    "plate": "01 A 123 AA",
+    "driver": "Azamat",
+    "driver_phone": "+998901112233",
+    "body_type": "ref",
+    "capacity_t": 22,
+    "temp_min": -22,
+    "temp_max": 12,
+    "current_city": "Toshkent",
+    "free_date": "2026-09-21",
+    "preferred_dir": "RU",
+    "fuel_l_100km": 34,
+    "active": 1
+  },
+  {
+    "id": "02",
+    "plate": "01 B 456 BB",
+    "driver": "Sardor",
+    "driver_phone": "+998901112244",
+    "body_type": "tent",
+    "capacity_t": 22,
+    "temp_min": null,
+    "temp_max": null,
+    "current_city": "Qozon",
+    "free_date": "2026-09-22",
+    "preferred_dir": "UZ",
+    "fuel_l_100km": 31,
+    "active": 1
+  }
+]

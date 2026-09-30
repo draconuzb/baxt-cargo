@@ -1,0 +1,30 @@
+# Sirlar — HECH QACHON git'ga tushmasin
+.env
+*.session
+*.session-journal
+
+# Ma'lumot
+*.db
+cargo.db
+
+# Ish fayllari
+trucks.json
+sources.json
+
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Loglar va zaxiralar
+logs/
+backups/
+.bot_offset
+positions.json
+road_factors.json
+trips.json
+*.db-wal
+*.db-shm
+*.pem
+*.key
+backup_*/

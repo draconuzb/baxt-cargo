@@ -1,0 +1,32 @@
+# Veb-panel. Sukut bo'yicha faqat 127.0.0.1 da — VPN yoki SSH tunnel orqali:
+#   ssh -L 8080:127.0.0.1:8080 user@server
+#
+#   sudo cp deploy/baxt-web.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now baxt-web
+#
+# .env da WEB_PASSWORD bo'lmasa servis ishga tushmaydi (ataylab).
+
+[Unit]
+Description=BAXT TRANSPORT — web panel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=baxt
+WorkingDirectory=/opt/baxt_cargo
+EnvironmentFile=/opt/baxt_cargo/.env
+ExecStart=/opt/baxt_cargo/.venv/bin/python main.py web
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

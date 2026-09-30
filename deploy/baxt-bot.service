@@ -1,0 +1,30 @@
+# Dispetcher boti: kartochka tugmalari, buyruqlar, GPS sinxronlash.
+# `listener` dan alohida process — biri yiqilsa ikkinchisi ishlayveradi.
+#
+#   sudo cp deploy/baxt-bot.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now baxt-bot
+
+[Unit]
+Description=BAXT TRANSPORT — dispatcher bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=baxt
+WorkingDirectory=/opt/baxt_cargo
+EnvironmentFile=/opt/baxt_cargo/.env
+ExecStart=/opt/baxt_cargo/.venv/bin/python main.py bot
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

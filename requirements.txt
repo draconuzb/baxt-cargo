@@ -1,0 +1,16 @@
+# Telegram guruhlarini o'qish (listen, backfill) — majburiy:
+telethon>=1.36
+
+# Tavsiya etiladi (bo'lmasa stdlib bilan ishlaydi):
+rapidfuzz>=3.6        # shahar nomlarini xato yozilganda ham topish uchun
+
+# Veb-panel (python main.py web). Qolgan qismlar bularsiz ishlaydi:
+fastapi>=0.110
+uvicorn>=0.29
+
+# Ixtiyoriy: murakkab e'lonlarni LLM bilan tahlil qilish
+anthropic>=0.40
+
+# Testlar uchun:
+pytest>=8
+httpx>=0.27           # veb-panel testlari (bo'lmasa o'tkazib yuboriladi)
