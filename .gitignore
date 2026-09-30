@@ -28,3 +28,8 @@ trips.json
 *.pem
 *.key
 backup_*/
+# Serverdagi ish fayllari
+*.bak
+*.session*
+.login_hash
+tg_login.py
