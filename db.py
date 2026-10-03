@@ -119,6 +119,29 @@ CREATE TABLE IF NOT EXISTS ai_messages (
 );
 CREATE INDEX IF NOT EXISTS idx_ai_chat ON ai_messages(chat_id, id);
 
+-- Kuzatiladigan Telegram guruhlari (panel/botdan qo'shiladi, listener ulaydi — sources.py)
+CREATE TABLE IF NOT EXISTS sources (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    ref         TEXT UNIQUE,            -- "user:name" | "invite:HASH" | "id:-100…"
+    chat_id     TEXT,                   -- listener topgan -100… id
+    title       TEXT,
+    username    TEXT,
+    status      TEXT DEFAULT 'pending', -- pending | active | error | removed
+    error       TEXT,
+    backfill    INTEGER DEFAULT 1,      -- ulanganda oxirgi xabarlarni o'qish
+    added_at    TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TEXT
+);
+
+-- Akkaunt a'zo bo'lgan guruhlar (panelda "bir bosishda kuzatish" uchun)
+CREATE TABLE IF NOT EXISTS tg_dialogs (
+    chat_id     TEXT PRIMARY KEY,
+    title       TEXT,
+    username    TEXT,
+    members     INTEGER,
+    seen_at     TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS matches (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
     cargo_id    INTEGER,

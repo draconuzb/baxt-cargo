@@ -391,6 +391,7 @@ HELP = """🚛 <b>BAXT TRANSPORT — диспетчер</b>
 ⏭ Пропустить — запоминает решение для статистики
 
 <b>Команды (по желанию):</b>
+/group @группа — читать новую группу Telegram (/groups — список)
 /pos 01 Казань 22.09 — положение машины вручную
 /done 42 1850 — фактическая маржа по рейсу
 /panel — открыть веб-панель без пароля"""
@@ -571,6 +572,39 @@ def cmd_watch(chat_id, args: list[str]) -> None:
         send(chat_id, "Формат: <code>/watch Ташкент Москва реф</code>")
         return
     _add_watch(chat_id, query, text)
+
+
+def cmd_group(chat_id, args: list[str]) -> None:
+    """/group @name | t.me/... | t.me/+HASH — yangi guruhni kuzatishga qo'shish."""
+    import sources
+    if not args:
+        send(chat_id, "Пришлите ссылку на группу: <code>/group @logistika_uz</code> или "
+                      "<code>/group https://t.me/+AbCdEf…</code>\n"
+                      "Закрытую группу — по ссылке-приглашению: аккаунт системы вступит сам.")
+        return
+    sid, error = sources.add(args[0])
+    if error:
+        send(chat_id, f"⚠️ {notifier.escape(error)}")
+        return
+    send(chat_id, "✅ Группа добавлена. Подключусь в течение минуты и сразу прочитаю "
+                  "объявления за последние сутки. Список: /groups")
+
+
+def cmd_groups(chat_id, args: list[str]) -> None:
+    """Kuzatilayotgan guruhlar va holati."""
+    import sources
+    rows = sources.list_sources()
+    if not rows:
+        send(chat_id, "Группы пока не добавлены. Пример: <code>/group @logistika_uz</code>")
+        return
+    mark = {"active": "🟢", "pending": "🟡", "error": "🔴"}
+    lines = [f"📡 <b>Группы</b> ({sum(1 for r in rows if r['status'] == 'active')} читаются)"]
+    for r in rows:
+        name = notifier.escape(r["title"] or sources.describe_ref(r["ref"]))
+        extra = f" — {notifier.escape(r['error'])}" if r["status"] == "error" and r["error"] else ""
+        lines.append(f"{mark.get(r['status'], '⚪')} {name}{extra}")
+    lines.append("\nДобавить: <code>/group ссылка</code> · управлять — в панели: Ещё → Группы")
+    send(chat_id, "\n".join(lines))
 
 
 def cmd_watches(chat_id, args: list[str]) -> None:
@@ -895,6 +929,8 @@ COMMANDS = {
     "watch": cmd_watch,
     "watches": cmd_watches,
     "unwatch": cmd_unwatch,
+    "group": cmd_group,
+    "groups": cmd_groups,
 }
 
 
@@ -1076,6 +1112,7 @@ COMMAND_MENU = [
     ("stats", "Статистика"),
     ("watches", "Сохранённые направления"),
     ("rules", "Правила компании"),
+    ("groups", "Группы Telegram, которые читаем"),
     ("panel", "Открыть веб-панель"),
     ("new", "Начать разговор с AI заново"),
     ("help", "Помощь"),

@@ -52,7 +52,8 @@ ga xarajatlar, `python main.py calibrate` ga reyslar.
 | `pipeline.py` | Xabarning to'liq yo'li; `handle_message` → `list[int]` |
 | `actions.py` | "Olaman"/"O'tkazish" — bot va panel uchun **yagona** mantiq |
 | `search.py` | Dispetcher so'rovi ("Toshkent Moskva") → park bo'yicha javob |
-| `listener.py` | Telethon (yagona async modul), FloodWait, qayta ulanish |
+| `listener.py` | Telethon (yagona async modul), FloodWait, qayta ulanish; guruhlar ro'yxati bazadan (har 30 s) |
+| `sources.py` | Kuzatiladigan guruhlar: panel "Ещё → Группы" va bot `/group` qo'shadi, listener ulaydi |
 | `bot.py` | Tugmalar, buyruqlar, haydovchi `/link` + Live Location |
 | `notifier.py` | Telegram matnlari (ruscha), soatlik cheklov |
 | `gps.py` | GPS manbalari (Protocol) va sinxronlash |
@@ -195,3 +196,11 @@ Har qanday o'zgartirishdan keyin `python main.py demo` va `pytest` ishlashi shar
     yo'nalish oldida bayroq (`web.route(a, b)`, `web.place(city)`, SVG `_FLAGS`;
     yangi davlat qo'shilsa bayrog'i ham — `test_every_country_has_flag`), fura
     raqami holat rangida (`st-free/trip/later`), taklif tafsiloti chiplarda (`.mc`).
+33. **Guruhlar bazada** (`sources` jadvali, `sources.json` faqat birinchi
+    ko'chirish uchun). Panel/bot faqat bazaga yozadi — Telethon'ni FAQAT
+    listener ishlatadi (bitta sessiya — bitta dastur, AUTH_KEY_DUPLICATED).
+    Listener har 30 s: bitta kutayotgan guruhni ulaydi (ochiq — a'zo bo'ladi,
+    yopiq — taklif havolasi), oxirgi sutkani bildirishnomasiz o'qiydi,
+    `WATCH` ni yangilaydi, `listener_seen` yuragini yozadi; akkaunt guruhlarini
+    har 10 daqiqada `tg_dialogs` ga. Bir siklda bittadan ortiq qo'shilmasin
+    (akkaunt bloklanadi — `JOINS_PER_CYCLE`).

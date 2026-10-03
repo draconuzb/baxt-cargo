@@ -1009,6 +1009,8 @@ _ICON_PATHS = {
     "more": '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/>'
             '<circle cx="19" cy="12" r="1.6"/>',
     "chevron": '<path d="m9 5 7 7-7 7"/>',
+    "users": '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>'
+             '<path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
     "snow": '<path d="M12 2v20M3.3 7l17.4 10M3.3 17l17.4-10"/>'
             '<path d="m9 3.5 3 2 3-2M9 20.5l3-2 3 2M4 11l2.5 1L4 13.6M20 11l-2.5 1 2.5 1.6"/>',
     "back": '<path d="m15 5-7 7 7 7"/>',
@@ -1040,11 +1042,12 @@ def ic(name: str, size: int = 18, cls: str = "") -> str:
 TABS = [("/", "Сегодня", "home"), ("/cargos", "Грузы", "box"), ("/chat", "AI", "spark"),
         ("/trucks", "Парк", "truck"), ("/more", "Ещё", "more")]
 MORE = [("/stats", "Статистика", "chart", "#0a84ff"),
+        ("/groups", "Группы Telegram", "users", "#34c759"),
         ("/rules", "Правила", "rules", "#af52de"), ("/watches", "Отслеживание", "bell", "#ff3b30"),
         ("/settings", "Настройки", "settings", "#8e8e93")]
 _SECTION = {"/search": "/cargos", "/map": "/cargos", "/cargo": "/cargos", "/truck": "/trucks",
             "/stats": "/more", "/history": "/trucks", "/rules": "/more", "/watches": "/more",
-            "/settings": "/more"}
+            "/settings": "/more", "/groups": "/more"}
 # Eski nom — testlar va tashqi havolalar uchun
 NAV = [(href, label, icon) for href, label, icon in TABS] + \
       [(href, label, icon) for href, label, icon, _ in MORE]
@@ -1132,7 +1135,8 @@ def page(title: str, body: str, active: str = "", head: str = "",
 
 # Asosiy bo'limlar sarlavhasi — har birining o'z rangi (buyurtmachi: "oddiy bo'lib
 # qolgan, jonlantiring"). (gradient sinfi, jonli emoji)
-TONES = {"cargo": "box", "park": "truck", "trips": "route", "ai": "spark", "more": "dashboard"}
+TONES = {"cargo": "box", "park": "truck", "trips": "route", "ai": "spark", "more": "dashboard",
+         "groups": "users"}
 
 
 def top(title: str, subtitle: str = "", back: tuple[str, str] | None = None,
@@ -2105,7 +2109,7 @@ def create_app() -> FastAPI:
 <tbody>{groups or _empty("Пока нет данных", "inbox", colspan=6)}</tbody>
 </table></div>
 <p class="muted">Группу с низкой долей взятых можно перестать отслеживать —
-удалите её из <code>sources.json</code>.</p>"""
+<a href="/groups">Ещё → Группы Telegram</a>.</p>"""
 
         few = '<span class="muted">мало данных</span>'
         route_rows = []
@@ -2315,8 +2319,10 @@ def create_app() -> FastAPI:
     @app.get("/more")
     async def more_page():
         import rules
+        import sources
         counts = {"/rules": sum(1 for r in rules.list_rules() if r["status"] == "active"),
-                  "/watches": len(db.active_watches())}
+                  "/watches": len(db.active_watches()),
+                  "/groups": sum(1 for r in sources.list_sources() if r["status"] == "active")}
 
         def row(href, label, icon, color):
             n = counts.get(href)
@@ -2326,8 +2332,9 @@ def create_app() -> FastAPI:
                     f'<div class="main"><span class="t">{label}</span></div>'
                     f'<span class="end">{badge}{ic("chevron", 16, "chev")}</span></a>')
 
-        groups = [("Анализ", MORE[:1]), ("AI и отслеживание", MORE[1:3]), ("Система", MORE[3:])]
-        body = top("Ещё", "Статистика, правила, настройки", tone="more")
+        groups = [("Анализ и источники", MORE[:2]), ("AI и отслеживание", MORE[2:4]),
+                  ("Система", MORE[4:])]
+        body = top("Ещё", "Статистика, группы, правила, настройки", tone="more")
         for title, items in groups:
             extra = ""
             if title == "Система":
@@ -2342,6 +2349,39 @@ def create_app() -> FastAPI:
                      + "".join(row(*item) for item in items) + extra + "</div>")
         body += '<div class="foot-note">BAXT TRANSPORT · панель диспетчера</div>'
         return page("Ещё", body, active="/more")
+
+    @app.get("/groups")
+    async def groups_page(msg: str = "", err: str = ""):
+        note = (_note("ok", e(msg)) if msg else "") + (_note("err", e(err)) if err else "")
+        return page("Группы Telegram", top("Группы Telegram",
+                                           "Откуда берутся грузы: группы, которые читает система",
+                                           back=BACK_MORE, tone="groups")
+                    + note + _groups_block(), active="/groups")
+
+    @app.post("/groups/add")
+    async def groups_add(request: Request):
+        import sources
+        form = await _form(request)
+        sid, error = sources.add(form.get("ref", ""))
+        if error:
+            return _redirect("/groups?" + urlencode({"err": error}))
+        return _redirect("/groups?" + urlencode(
+            {"msg": "Группа добавлена — система подключится к ней в течение минуты "
+                    "и сразу прочитает объявления за последние сутки."}))
+
+    @app.post("/groups/{source_id}/remove")
+    async def groups_remove(source_id: int):
+        import sources
+        sources.remove(source_id)
+        return _redirect("/groups?" + urlencode({"msg": "Группа больше не читается."}))
+
+    @app.post("/groups/{source_id}/retry")
+    async def groups_retry(source_id: int):
+        import sources
+        row = sources.get(source_id)
+        if row is not None:
+            sources.add(row["ref"])
+        return _redirect("/groups")
 
     @app.get("/watches")
     async def watches_page():
@@ -2481,6 +2521,83 @@ def _watch_block() -> str:
 <tbody>{''.join(items)}</tbody></table></div>
 <p class="muted">Когда появится такой груз, сообщение придёт в Telegram независимо
 от порога балла. По истечении срока отслеживание отключится само.</p>"""
+
+
+_SRC_STATUS = {"active": ("s-free", "читается"), "pending": ("s-later", "подключается…"),
+               "error": ("s-off", "ошибка")}
+
+
+def _groups_block() -> str:
+    """Kuzatiladigan guruhlar, qo'shish formasi, akkauntdagi boshqa guruhlar."""
+    import sources
+    seen = sources.last_seen_seconds()
+    if seen is None:
+        live = _note("info", "Listener ещё не отметился. Группы подключатся после его "
+                             "запуска (сервис baxt-listener).")
+    elif seen < 180:
+        live = (f'<div class="live"><b></b>Listener на связи · '
+                f'{e(ago_phrase(db._ago(hours=seen / 3600)))}</div>')
+    else:
+        live = _note("err", f"Listener не отвечает {int(seen // 60)} мин — новые группы "
+                            f"не подключатся. Проверьте сервис baxt-listener.")
+
+    form = f"""<form class="card" method="post" action="/groups/add" style="margin-bottom:16px">
+  <div class="searchbar" style="margin-bottom:8px">
+    <div class="sfield">{ic("plus", 17)}<input name="ref" required
+      placeholder="@logistika_uz или https://t.me/+AbCd…" aria-label="Ссылка на группу"></div>
+    <button class="btn primary">Добавить</button></div>
+  <div class="muted">Открытая группа — по @имени или ссылке t.me/… Закрытая — по
+  ссылке-приглашению t.me/+…: аккаунт системы вступит в неё сам.</div>
+</form>"""
+
+    stats = sources.cargo_stats(days=7)
+    rows = []
+    for r in sources.list_sources():
+        cls, label = _SRC_STATUS.get(r["status"], ("s-off", r["status"]))
+        name = r["title"] or sources.describe_ref(r["ref"])
+        user = f"@{e(r['username'])} · " if r["username"] else ""
+        st = stats.get(r["username"] or "") or stats.get(r["title"] or "")
+        if r["status"] == "error":
+            detail = f'<span class="suspect-tag">{e(r["error"] or "")}</span>'
+        elif r["status"] == "pending":
+            detail = e(r["error"] or "ждём listener (до минуты)")
+        elif st:
+            detail = (f'{st["n"]} {plural(st["n"], "груз", "груза", "грузов")} за 7 дн. · '
+                      f'последний {e(ago_phrase(st["last"]))}')
+        else:
+            detail = "за 7 дней грузов не было"
+        retry = (f'<form method="post" action="/groups/{r["id"]}/retry" class="inline">'
+                 f'<button class="btn sm tint" title="Повторить">{ic("refresh", 15)}</button></form>'
+                 if r["status"] == "error" else "")
+        remove = (f'<form method="post" action="/groups/{r["id"]}/remove" class="inline" '
+                  f'onsubmit="return confirm(\'Перестать читать эту группу?\')">'
+                  f'<button class="btn sm danger" title="Убрать">{ic("trash", 15)}</button></form>')
+        rows.append(f"""<div class="li">
+  <span class="badge" style="background:{'#34c759' if r['status'] == 'active' else '#8e8e93'}">{ic("users", 18)}</span>
+  <div class="main"><span class="t">{e(name)}</span>
+    <div class="s">{user}<span class="spill {cls}">{label}</span></div>
+    <div class="s">{detail}</div></div>
+  <span class="end">{retry}{remove}</span></div>""")
+    watched = (f'<h2 class="sec">Читаются <small>{len(rows)}</small></h2>'
+               + (f'<div class="list">{"".join(rows)}</div>' if rows else
+                  _empty("Пока ни одной группы. Добавьте ссылку выше.", "users")))
+
+    found = sources.dialogs()
+    if found:
+        items = "".join(f"""<div class="li">
+  <span class="badge" style="background:#0a84ff">{ic("inbox", 18)}</span>
+  <div class="main"><span class="t">{e(d['title'] or d['chat_id'])}</span>
+    <div class="s">{('@' + e(d['username']) + ' · ') if d['username'] else ''}{f"{d['members']:,} участников".replace(",", " ") if d['members'] else 'группа'}</div></div>
+  <span class="end"><form method="post" action="/groups/add" class="inline">
+    <input type="hidden" name="ref" value="{e(d['chat_id'])}">
+    <button class="btn sm tint">{ic("plus", 14)} Читать</button></form></span></div>"""
+            for d in found[:60])
+        account = (f'<h2 class="sec">Ваши группы в Telegram <small>аккаунт системы уже в них — '
+                   f'выберите, какие читать</small></h2><div class="list">{items}</div>')
+    else:
+        account = ('<p class="muted" style="margin:16px 4px">Список групп аккаунта появится, '
+                   'когда listener его обновит (каждые 10 минут).</p>')
+    return live + form + watched + account
 
 
 def _city_datalist() -> str:

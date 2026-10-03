@@ -135,3 +135,126 @@ def test_backfill_does_not_notify(clean_db, monkeypatch):
     monkeypatch.setattr(listener.config, "load_sources", lambda: ["@a"])
     asyncio.run(listener.backfill())
     assert sent == []
+
+
+# ---------------------------------------------------------------- guruhlar bazadan (sources)
+
+from datetime import datetime, timezone  # noqa: E402
+
+import sources  # noqa: E402
+
+
+class FakeTG:
+    """Guruh ulash uchun soxta mijoz: get_entity, so'rovlar (join/invite), xabarlar."""
+
+    def __init__(self, entities=None, invites=None, messages=None, fail=None, dialogs=None):
+        self.entities = entities or {}
+        self.invites = invites or {}
+        self.messages = messages or {}
+        self.fail = set(fail or [])
+        self.dialogs = dialogs or []
+        self.joined = []
+
+    async def get_entity(self, key):
+        if key in self.fail:
+            raise ValueError("topilmadi")
+        return self.entities[key]
+
+    async def __call__(self, req):
+        name = type(req).__name__
+        if name == "JoinChannelRequest":
+            self.joined.append(req.channel)
+            return None
+        if name == "ImportChatInviteRequest":
+            return SimpleNamespace(chats=[self.invites[req.hash]])
+        raise AssertionError(name)
+
+    async def iter_messages(self, entity, limit=60):
+        for m in self.messages.get(entity.id, [])[:limit]:
+            yield m
+
+    async def iter_dialogs(self, limit=500):
+        for d in self.dialogs:
+            yield d
+
+
+def chan(cid, username=None, title="Guruh", left=False):
+    return SimpleNamespace(id=cid, username=username, title=title, left=left, megagroup=True)
+
+
+def now_msg(i, text):
+    return SimpleNamespace(id=i, message=text, date=datetime.now(timezone.utc))
+
+
+@pytest.fixture
+def fresh_watch():
+    listener.WATCH.clear()
+    yield listener.WATCH
+    listener.WATCH.clear()
+
+
+def test_sync_joins_public_group_and_reads_recent(clean_db, fresh_watch, monkeypatch):
+    monkeypatch.setattr("notifier.send", lambda *a, **k: None)
+    sid, _ = sources.add("@yuk_markazi")
+    g = chan(-1001, "yuk_markazi", "Yuk markazi", left=True)
+    fake = FakeTG(entities={"yuk_markazi": g}, messages={-1001: [
+        now_msg(1, "Есть груз Ташкент → Москва, 20т тент, 4000$")]})
+    asyncio.run(listener.sync_sources(fake))
+    row = sources.get(sid)
+    assert row["status"] == "active" and row["chat_id"] == "-1001" and row["title"] == "Yuk markazi"
+    assert fake.joined == [g]                       # akkaunt a'zo emas edi — qo'shildi
+    assert -1001 in fresh_watch
+    with clean_db.connect() as conn:
+        assert conn.execute("SELECT source FROM cargos").fetchone()["source"] == "yuk_markazi"
+    assert row["backfill"] == 0 and sources.last_seen_seconds() is not None
+
+
+def test_sync_invite_link(clean_db, fresh_watch):
+    sources.add("https://t.me/+AbCdEf12345")
+    fake = FakeTG(invites={"AbCdEf12345": chan(-1002, None, "Yopiq guruh")})
+    asyncio.run(listener.sync_sources(fake))
+    assert sources.list_sources()[0]["status"] == "active" and -1002 in fresh_watch
+
+
+def test_sync_error_is_readable_and_not_watched(clean_db, fresh_watch):
+    sid, _ = sources.add("@yoq_guruh")
+    asyncio.run(listener.sync_sources(FakeTG(fail={"yoq_guruh"})))
+    row = sources.get(sid)
+    assert row["status"] == "error" and "не найдена" in row["error"]
+    assert not fresh_watch
+
+
+def test_sync_rejects_person(clean_db, fresh_watch):
+    sid, _ = sources.add("@odam_ismi")
+    person = SimpleNamespace(id=77, first_name="Ali", username="odam_ismi")
+    asyncio.run(listener.sync_sources(FakeTG(entities={"odam_ismi": person})))
+    assert sources.get(sid)["status"] == "error"
+
+
+def test_removed_group_leaves_watch(clean_db, fresh_watch):
+    cid = -1001000000003
+    sid, _ = sources.add(str(cid))
+    asyncio.run(listener.sync_sources(FakeTG(entities={cid: chan(cid)})))
+    assert cid in fresh_watch
+    sources.remove(sid)
+    asyncio.run(listener.sync_sources(FakeTG()))
+    assert cid not in fresh_watch
+
+
+def test_one_join_per_cycle(clean_db, fresh_watch):
+    """Akkaunt bloklanmasin: bir siklda bitta guruh ulanadi."""
+    sources.add("@grp_one")
+    sources.add("@grp_two")
+    fake = FakeTG(entities={"grp_one": chan(-11, "grp_one"), "grp_two": chan(-12, "grp_two")})
+    asyncio.run(listener.sync_sources(fake))
+    assert fresh_watch == {-11}
+    asyncio.run(listener.sync_sources(fake))
+    assert fresh_watch == {-11, -12}
+
+
+def test_refresh_dialogs_keeps_only_groups(clean_db):
+    dialogs = [SimpleNamespace(is_group=True, is_channel=False, entity=chan(-21, "a", "A")),
+               SimpleNamespace(is_group=False, is_channel=False, entity=SimpleNamespace(id=5)),
+               SimpleNamespace(is_group=False, is_channel=True, entity=chan(-22, None, "B"))]
+    assert asyncio.run(listener.refresh_dialogs(FakeTG(dialogs=dialogs))) == 2
+    assert {d["title"] for d in sources.dialogs()} == {"A", "B"}
