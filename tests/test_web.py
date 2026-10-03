@@ -751,34 +751,20 @@ def test_skip_elsewhere_keeps_simple_note(client, app_env):
     assert "HX-Retarget" not in r.headers and "Пропущено" in r.text
 
 
-# ---------------------------------------------------------------- animatsiyali emoji
+# ---------------------------------------------------------------- stikersiz (professional ko'rinish)
 
-def test_anim_emoji_is_image_with_static_fallback():
-    html = web.anim("truck", 30)
-    assert '<img src="/static/emoji/truck.webp" width="30"' in html
-    assert 'media="(prefers-reduced-motion: reduce)"' in html and "truck.png" in html
-
-
-def test_emoji_files_served_publicly_with_cache(anon):
-    r = anon.get("/static/emoji/truck.webp")               # kirmasdan ham (login sahifasi)
-    assert r.status_code == 200 and r.headers["content-type"] == "image/webp"
-    assert "max-age" in r.headers["cache-control"]
-    assert anon.get("/static/emoji/truck.png").headers["content-type"] == "image/png"
-    for bad in ("nope.webp", "truck.svg", "Truck.webp", "..%2Fweb.py"):
-        assert anon.get(f"/static/emoji/{bad}").status_code == 404, bad
-    # "../" yo'li — fayl mazmuni hech qachon qaytmaydi (login'ga yo'naltiriladi)
-    r = anon.get("/static/emoji/../web.py", follow_redirects=False)
-    assert r.status_code in (303, 404) and "def " not in r.text
+def test_no_sticker_images(client):
+    """Buyurtmachi: stikerlar "bolalar dasturiga o'xshab qolgan" — faqat SVG ikonkalar."""
+    html = "".join(client.get(u).text for u in ("/", "/more", "/chat", "/history", "/trucks",
+                                               "/cargos", "/login"))
+    assert "/static/emoji" not in html and "<picture" not in html and "<img" not in html
+    assert 'class="logo' in html                   # firma belgisi — SVG
 
 
-def test_every_used_emoji_exists(client):
-    """Sahifalarda ishlatilgan har bir emoji fayli bor (buzuq rasm bo'lmasin)."""
-    import re as _re
-    html = "".join(client.get(u).text for u in ("/", "/more", "/chat", "/history", "/login"))
-    names = set(_re.findall(r"/static/emoji/([a-z]+)\.webp", html))
-    assert {"truck", "sparkles", "box"} <= names
-    for n in names:
-        assert (web.EMOJI_DIR / f"{n}.webp").is_file() and (web.EMOJI_DIR / f"{n}.png").is_file()
+def test_old_emoji_path_is_closed(anon):
+    """Eski ochiq yo'l yopildi: kirmasdan hech narsa berilmaydi."""
+    r = anon.get("/static/emoji/truck.webp", follow_redirects=False)
+    assert r.status_code in (303, 401, 404) and r.headers.get("content-type", "") != "image/webp"
 
 
 def test_chat_history_keeps_take_buttons(client, app_env):

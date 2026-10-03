@@ -130,14 +130,14 @@ Har qanday o'zgartirishdan keyin `python main.py demo` va `pytest` ishlashi shar
     ichiga qo'shiladi (`web.MORE`, `web._SECTION`), ichki sahifada
     `top(..., back=...)` bilan orqaga havola. Telefonga jadval emas, ro'yxat
     (`.list`/`.li`, taklif — `_deal`).
-17. **Panelda emoji BELGISI (shrift) ishlatilmaydi** — interfeys ikonkalari
-    `web.ic("nom")` (SVG). Jonli bezak uchun **animatsiyali emoji faqat rasm**:
-    `web.anim("nom")` → `static/emoji/nom.webp` (Noto, CC BY 4.0, o'z
-    serverimizdan, 72 px); "harakatni kamaytirish" da statik `.png`. Yangi
-    emoji — `deploy/build_emoji.py` ga qo'shib qayta yig'ing (Pillow faqat
-    dasturchida). Belgi emas, rasm: har telefonda bir xil. Buni
-    `test_icons_are_svg_not_emoji` va `test_every_used_emoji_exists` tekshiradi.
-    Telegram xabarlarida oddiy emoji qoladi — u yerda o'rinli.
+17. **Panelda emoji ham, stiker ham yo'q** — faqat bir uslubdagi SVG chiziqli
+    ikonkalar `web.ic("nom")` (`_ICON_PATHS`), firma belgisi `web.logo()`.
+    Buyurtmachi (2026-10-03): animatsiyali stikerlar "bolalar dasturiga
+    o'xshab qolgan" — olib tashlandi (`static/emoji`, `anim()` yo'q). Tizim
+    ko'rinishi: rang faqat ma'no uchun (holat, narx, bayroq). Ro'yxatdagi e'lon
+    parchasi ham emojisiz (`_preview`; asl matn o'zgarmaydi). Tekshiruv:
+    `test_icons_are_svg_not_emoji`, `test_no_sticker_images`. Telegram
+    xabarlarida oddiy emoji qoladi — u yerda o'rinli.
 18. **Harakatlar** `prefers-reduced-motion` ni hurmat qiladi.
 19. Panel qidiruvi va bot qidiruvi bitta `search.py` dan foydalanadi —
     javob ikkala kanalda bir xil bo'lishi kerak.
@@ -188,8 +188,10 @@ Har qanday o'zgartirishdan keyin `python main.py demo` va `pytest` ishlashi shar
 32. **Mavzu doim yorug'** (buyurtmachi: Telegram tunda panel qop-qora ochilardi).
     Qorong'i — faqat "Ещё → тема" tanlansa (`data-theme="dark"`, grafit, qora
     emas). `prefers-color-scheme` ishlatilmaydi (`test_light_theme_is_default`).
-    Buyurtmachi: dizayn "oddiy bo'lib qolmasin" — asosiy bo'lim sarlavhasi rangli
-    gradient (`top(..., tone="cargo|park|trips|ai|more")`, bosh sahifada `hero`),
+    Buyurtmachi: dizayn "oddiy bo'lib qolmasin", lekin bolalarcha ham emas —
+    asosiy bo'lim sarlavhasi firma rangida (bitta to'q ko'k gradient `--hdr`,
+    shisha plitkada ikonka; `top(..., tone="cargo|park|trips|ai|more")`,
+    bosh sahifada `hero`),
     yo'nalish oldida bayroq (`web.route(a, b)`, `web.place(city)`, SVG `_FLAGS`;
     yangi davlat qo'shilsa bayrog'i ham — `test_every_country_has_flag`), fura
     raqami holat rangida (`st-free/trip/later`), taklif tafsiloti chiplarda (`.mc`).

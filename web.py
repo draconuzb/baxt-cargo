@@ -239,6 +239,21 @@ def ago_phrase(timestamp) -> str:
     return "только что" if text == "сейчас" else f"{text} назад"
 
 
+# Emoji va bezak belgilari (bayroq, piktogramma, 🅰 kabi harf-belgilar, ✅ ⭐)
+_EMOJI_RE = re.compile("[\U0001F000-\U0001FAFF\u2600-\u27BF\u2B00-\u2BFF\u2300-\u23FF"
+                       "\uFE0F\u200D\u20E3]+")
+
+
+def _preview(text: str | None) -> str:
+    """Ro'yxatdagi e'lon parchasi — emojisiz, bitta qatorga yig'ilgan.
+
+    Guruh e'lonlari 🔥📍🅰 bilan to'la — ro'yxatda "bolalarcha" ko'rinadi.
+    Asl matn (yuk sahifasida) o'zgarmaydi (4-qoida).
+    """
+    plain = _EMOJI_RE.sub(" ", text or "")
+    return re.sub(r"\s+", " ", plain).strip()
+
+
 def _status_pill(status: str) -> str:
     kind = {"new": "ok", "taken": "", "skipped": "warn", "expired": "bad"}.get(status, "")
     return f'<span class="pill {kind}">{e(STATUS.get(status, status))}</span>'
@@ -438,6 +453,7 @@ CSS = """
 --ok:#34c759;--ok-bg:rgba(52,199,89,.15);--warn:#ff9500;--warn-bg:rgba(255,149,0,.16);
 --bad:#ff3b30;--bad-bg:rgba(255,59,48,.14);--info-bg:rgba(0,122,255,.10);--track:#e5e5ea;
 --ok-text:#1a8a3a;--warn-text:#b35c00;
+--hdr:linear-gradient(135deg,#172b6b 0%,#1e40af 55%,#2563eb 100%);
 --nav-bg:rgba(255,255,255,.78);--nav-brd:rgba(60,60,67,.14);
 --shadow:0 1px 2px rgba(15,23,42,.06),0 6px 20px rgba(15,23,42,.05);
 --shadow-lg:0 12px 40px rgba(15,23,42,.14);
@@ -461,8 +477,7 @@ color-scheme:dark}
 html{height:100%;-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100%;color:var(--text);
 background:radial-gradient(640px 340px at 0% -60px,rgba(10,132,255,.13),transparent 70%) no-repeat,
-radial-gradient(640px 340px at 100% -40px,rgba(124,58,237,.12),transparent 70%) no-repeat,
-radial-gradient(520px 300px at 50% 105%,rgba(52,199,89,.06),transparent 70%) no-repeat fixed,var(--bg);
+radial-gradient(640px 340px at 100% -40px,rgba(30,64,175,.08),transparent 70%) no-repeat,var(--bg);
 font:16px/1.47 -apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",
 "Segoe UI",Roboto,system-ui,sans-serif;letter-spacing:-.01em;
 -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
@@ -615,21 +630,26 @@ background:var(--surface-3);color:var(--muted)}
 .pill.warn{background:var(--warn-bg);color:var(--warn)}
 .pill.bad{background:var(--bad-bg);color:var(--bad)}
 .pill.info{background:var(--info-bg);color:var(--brand)}
-/* animatsiyali emoji (rasm) */
-.em{display:inline-flex;flex:none;vertical-align:middle;line-height:0}
-.em img{display:block}
-h1 .em{margin-left:6px;vertical-align:-4px}
 .kpi{position:relative}
-.kpi .em{position:absolute;right:10px;top:10px}
-.li .badge.em-badge{background:none;width:34px;height:34px}
-.road{position:relative;margin-top:22px}
+/* reys chizig'i: yo'ldagi mashina belgisi */
+.road{position:relative;margin-top:16px}
 .road .bar{margin-top:0}
-.road .rider{position:absolute;top:-24px;transform:scaleX(-1)}
-.empty-row .em{margin-right:6px}
+.road .rider{position:absolute;top:-10px;width:26px;height:26px;border-radius:50%;display:grid;
+place-items:center;background:var(--brand);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+.empty-row>span{display:inline-flex;align-items:center;gap:7px}
+/* firma belgisi */
+.logo{display:inline-grid;place-items:center;border-radius:28%;flex:none;color:#fff;
+background:linear-gradient(135deg,#1e3a8a,#2563eb)}
+.logo .ic{stroke-width:2}
+.logo.glass{background:rgba(255,255,255,.18);border:.5px solid rgba(255,255,255,.28)}
+.okdot{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;
+background:var(--ok);color:#fff;vertical-align:-4px;margin-right:3px}
+.okdot .ic{stroke-width:3}
+.toast-msg .ic{color:var(--ok);margin-right:4px;stroke-width:2.6}
+.ic.snow{color:#0ea5e9;margin-right:3px}
 /* bosh sahifa sarlavhasi (gradient) */
 .hero{position:relative;overflow:hidden;border-radius:24px;padding:16px 16px 14px;margin:2px 0 6px;
-color:#fff;background:linear-gradient(135deg,#0a6cff 0%,#4f46e5 58%,#7c3aed 100%);
-box-shadow:0 12px 30px rgba(79,70,229,.28)}
+color:#fff;background:var(--hdr);box-shadow:0 12px 30px rgba(30,58,138,.25)}
 .hero:before{content:"";position:absolute;right:-70px;top:-80px;width:230px;height:230px;
 border-radius:50%;background:radial-gradient(rgba(255,255,255,.30),transparent 68%)}
 .hero>*{position:relative}
@@ -638,7 +658,6 @@ border-radius:50%;background:radial-gradient(rgba(255,255,255,.30),transparent 6
 letter-spacing:.08em;text-transform:uppercase}
 .hero h1{font-size:32px;font-weight:800;letter-spacing:-.03em;margin:10px 0 0;color:#fff;
 display:flex;align-items:center;gap:6px}
-.hero h1 .em{margin:0}
 .hero-sub{opacity:.88;font-size:15px;margin-top:1px}
 .hero-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.2);color:#fff;
 border-radius:999px;padding:7px 13px;font-weight:600;font-size:14px}
@@ -650,7 +669,8 @@ border:.5px solid rgba(255,255,255,.18)}
 .hk b{display:block;font-size:24px;font-weight:700;line-height:1.15;letter-spacing:-.02em;
 font-variant-numeric:tabular-nums}
 .hk span{font-size:12px;opacity:.9;font-weight:500}
-.hk .em{float:right}
+.hk-ic{float:right;display:grid;place-items:center;width:26px;height:26px;border-radius:9px;
+background:rgba(255,255,255,.18)}
 /* fura holati — rangli belgi */
 .spill{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;
 padding:2px 9px 2px 8px;border-radius:999px;white-space:nowrap;vertical-align:1px}
@@ -677,12 +697,10 @@ border-radius:50%;background:radial-gradient(rgba(255,255,255,.28),transparent 6
 .phead .ph-sub{opacity:.9;font-size:14.5px;margin-top:4px;line-height:1.35}
 .phead .ph-right{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
 .phead .ph-right .btn{background:rgba(255,255,255,.22);color:#fff;box-shadow:none}
-.phead .ph-art{flex:none;filter:drop-shadow(0 8px 12px rgba(0,0,0,.22));transform:rotate(-6deg)}
-.tone-cargo{background:linear-gradient(135deg,#ea580c 0%,#db2777 100%);--ph-shadow:rgba(219,39,119,.28)}
-.tone-park{background:linear-gradient(135deg,#059669 0%,#0e7490 100%);--ph-shadow:rgba(14,116,144,.28)}
-.tone-trips{background:linear-gradient(135deg,#0d9488 0%,#2563eb 100%);--ph-shadow:rgba(37,99,235,.26)}
-.tone-ai{background:linear-gradient(135deg,#4f46e5 0%,#9333ea 100%);--ph-shadow:rgba(147,51,234,.28)}
-.tone-more{background:linear-gradient(135deg,#334155 0%,#2563eb 100%);--ph-shadow:rgba(37,99,235,.24)}
+.phead .ph-art{flex:none;display:grid;place-items:center;width:58px;height:58px;border-radius:18px;
+background:rgba(255,255,255,.15);border:.5px solid rgba(255,255,255,.26)}
+.phead .ph-art .ic{stroke-width:1.7}
+.phead{background:var(--hdr);--ph-shadow:rgba(30,58,138,.24)}
 /* bayroqlar */
 .flags{display:inline-flex;gap:3px;margin-right:7px;vertical-align:1px}
 .flag{position:relative;display:inline-block;width:18px;height:12px;border-radius:3px;overflow:hidden;
@@ -903,8 +921,8 @@ transition:background .2s}
 .tabbar a.on .ti{background:var(--brand-soft)}
 .tabbar a:active{opacity:.6}
 .tabbar .orb{width:56px;height:56px;margin-top:-30px;border-radius:50%;display:grid;
-place-items:center;color:#fff;background:linear-gradient(140deg,#0a84ff,#5e5ce6);
-border:4px solid var(--bg);box-shadow:0 8px 20px rgba(10,132,255,.38)}
+place-items:center;color:#fff;background:linear-gradient(140deg,#1e40af,#2563eb);
+border:4px solid var(--bg);box-shadow:0 8px 20px rgba(30,64,175,.35)}
 .tabbar a.ai{color:var(--text)}
 .tabbar a.ai.on{color:var(--brand)}
 main{padding:calc(10px + env(safe-area-inset-top,0px)) 16px
@@ -991,6 +1009,8 @@ _ICON_PATHS = {
     "more": '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/>'
             '<circle cx="19" cy="12" r="1.6"/>',
     "chevron": '<path d="m9 5 7 7-7 7"/>',
+    "snow": '<path d="M12 2v20M3.3 7l17.4 10M3.3 17l17.4-10"/>'
+            '<path d="m9 3.5 3 2 3-2M9 20.5l3-2 3 2M4 11l2.5 1L4 13.6M20 11l-2.5 1 2.5 1.6"/>',
     "back": '<path d="m15 5-7 7 7 7"/>',
     "satellite": '<path d="M13 7 9 3 5 7l4 4M17 11l4 4-4 4-4-4"/>'
                  '<path d="m8 12 4 4M16 8l-4-4"/><path d="M3 21a6 6 0 0 0 6-6"/>',
@@ -1002,20 +1022,11 @@ ICON_SPRITE = ('<svg xmlns="http://www.w3.org/2000/svg" style="display:none">'
                + "</svg>")
 
 
-EMOJI_DIR = config.BASE_DIR / "static" / "emoji"
-_EMOJI_CACHE: dict[str, bytes] = {}
-
-
-def anim(name: str, size: int = 24, cls: str = "") -> str:
-    """Animatsiyali emoji — RASM (Noto, o'z serverimizdan), shrift belgisi emas.
-
-    Shrift emoji har telefonda har xil chiqadi (17-qoida); rasm hamma joyda
-    bir xil. "Harakatni kamaytirish" yoqilgan bo'lsa — qimirlamaydigan PNG.
-    """
-    return (f'<picture class="em {cls}"><source srcset="/static/emoji/{name}.png" '
-            f'media="(prefers-reduced-motion: reduce)">'
-            f'<img src="/static/emoji/{name}.webp" width="{size}" height="{size}" alt="" '
-            f'decoding="async"></picture>')
+def logo(size: int = 32, glass: bool = False) -> str:
+    """Firma belgisi: gradient kvadrat ichida yuk mashinasi (stiker emas)."""
+    cls = "logo glass" if glass else "logo"
+    return (f'<span class="{cls}" style="width:{size}px;height:{size}px">'
+            f'{ic("truck", round(size * 0.56))}</span>')
 
 
 def ic(name: str, size: int = 18, cls: str = "") -> str:
@@ -1087,7 +1098,7 @@ def page(title: str, body: str, active: str = "", head: str = "",
         f'<a href="{href}" class="{"on" if href == active else ""}">{ic(icon)}<span>{label}</span></a>'
         for href, label, icon, _ in MORE)
     menu = (f'<aside class="side">'
-            f'<div class="brand">{anim("truck", 28)}<span>BAXT</span></div>{side_links}'
+            f'<div class="brand">{logo(30)}<span>BAXT</span></div>{side_links}'
             f'<div class="grp">Ещё</div>{side_more}'
             f'<div class="foot">'
             f'<button class="btn ghost" onclick="baxtTheme()" '
@@ -1100,7 +1111,7 @@ def page(title: str, body: str, active: str = "", head: str = "",
     for href, label, icon in TABS:
         on = " on" if href == section else ""
         if href == "/chat":
-            tabs.append(f'<a href="{href}" class="ai{on}"><span class="orb">{anim("sparkles", 30)}</span>'
+            tabs.append(f'<a href="{href}" class="ai{on}"><span class="orb">{ic("spark", 26)}</span>'
                         f'<span>{label}</span></a>')
         else:
             tabs.append(f'<a href="{href}" class="{on.strip()}"><span class="ti">{ic(icon, 24)}</span>'
@@ -1121,7 +1132,7 @@ def page(title: str, body: str, active: str = "", head: str = "",
 
 # Asosiy bo'limlar sarlavhasi — har birining o'z rangi (buyurtmachi: "oddiy bo'lib
 # qolgan, jonlantiring"). (gradient sinfi, jonli emoji)
-TONES = {"cargo": "box", "park": "truck", "trips": "flag", "ai": "robot", "more": "sparkles"}
+TONES = {"cargo": "box", "park": "truck", "trips": "route", "ai": "spark", "more": "dashboard"}
 
 
 def top(title: str, subtitle: str = "", back: tuple[str, str] | None = None,
@@ -1136,7 +1147,7 @@ def top(title: str, subtitle: str = "", back: tuple[str, str] | None = None,
         right_html = f'<div class="ph-right">{right}</div>' if right else ""
         return (f'{back_html}<section class="phead tone-{tone} fade"><div class="ph-text">'
                 f'<h1>{title}</h1>{sub}{right_html}</div>'
-                f'<span class="ph-art">{anim(TONES.get(tone, "sparkles"), 58)}</span></section>')
+                f'<span class="ph-art">{ic(TONES.get(tone, "dashboard"), 28)}</span></section>')
     back_html = (f'<a class="back" href="{back[0]}">{ic("back", 20)}{e(back[1])}</a>'
                  if back else "")
     sub = f'<div class="sub">{subtitle}</div>' if subtitle else ""
@@ -1262,7 +1273,7 @@ def _taken_card(res, driver_ok: bool) -> str:
     driver = ("водителю отправлено в Telegram" if driver_ok else
               "водитель не подключён к боту — передайте рейс сами")
     return f"""<div class="deal taken" id="m{mid}">
-  <div class="row1"><b>{anim("party", 22)} Груз взят — фура №{e(truck_id)}</b>
+  <div class="row1"><b><span class="okdot">{ic("check", 13)}</span> Груз взят — фура №{e(truck_id)}</b>
   <span class="pill info">В пути</span></div>
   <div class="meta">#{c['id']} {route(c['from_city'], c['to_city'])} ·
   погрузка {e(_day_text(c.get('load_date')))} · освободится <b>{e(_day_text(res.free_date))}</b></div>
@@ -1421,9 +1432,6 @@ def _ask_ai_button(question: str, label: str = "Спросить AI") -> str:
             f'{ic("spark", 14)} {label}</a>')
 
 
-_STATE_EMOJI = {"free": "truck", "trip": "truck", "later": "alarm", "off": "sleep"}
-
-
 def _truck_state(t, trips) -> tuple[str, str]:
     """(holat, matn): free | trip | later | off — kartochkada rangli nuqta bilan."""
     if not t["active"]:
@@ -1462,7 +1470,7 @@ def _trip_block(trip, show_truck: bool = False) -> str:
   <div class="meta">груз #{trip['cargo_id']} · погрузка {e(_day_text(trip['load_date']))} ·
   освободится <b>{e(_day_text(free))}</b> · прогноз {money(trip['margin_usd'])}{actual}</div>
   <div class="road" title="{done}/{total} дн."><div class="bar"><i style="width:{done * 100 // total}%"></i></div>
-  <span class="rider" style="left:max(0px, calc({done * 100 // total}% - 28px))">{anim("truck", 28)}</span></div>
+  <span class="rider" style="left:max(0px, calc({done * 100 // total}% - 13px))">{ic("truck", 15)}</span></div>
   <div class="acts">{finish}{undo}</div>
 </div>"""
 
@@ -1475,12 +1483,12 @@ def _truck_card(t, offers, trips=()) -> str:
     state, label = _truck_state(t, trips)
     where = t["current_city"] or "—"
     title = route(trips[-1]['from_city'], where) if trips else place(where)
-    snow = anim("snow", 16) if t["body_type"] == "ref" else ""
+    snow = ic("snow", 13, "snow") if t["body_type"] == "ref" else ""
     header = f"""<a class="li" href="/truck/{e(t['id'])}"><span class="tnum big st-{state}">№{e(t['id'])}</span>
   <div class="main"><span class="t">{title}</span>
   <div class="s"><span class="spill s-{state}">{e(label)}</span>
   {snow}{e(body)}{e(temp)} · {t['capacity_t'] or 0:g} т</div></div>
-  <span class="end">{anim(_STATE_EMOJI[state], 32)}{ic("chevron", 16, "chev")}</span></a>"""
+  <span class="end">{ic("chevron", 16, "chev")}</span></a>"""
     parts = [header] + [_trip_block(tr) for tr in trips]
     if not t["active"]:
         return (f'<section class="card tcard truck off" id="truck-{e(t["id"])}">'
@@ -1491,7 +1499,7 @@ def _truck_card(t, offers, trips=()) -> str:
         parts += [_offer(o) for o in offers]
     else:
         ask = f"Найди груз для фуры {t['id']}"
-        parts.append(f'<div class="empty-row"><span>{anim("eyes", 22)}Пока подходящих грузов нет</span>'
+        parts.append(f'<div class="empty-row"><span>{ic("search", 16)}Пока подходящих грузов нет</span>'
                      f'{_ask_ai_button(ask)}</div>')
     cls = "card tcard truck ontrip" if trips else "card tcard truck"
     return f'<section class="{cls}" id="truck-{e(t["id"])}">{"".join(parts)}</section>'
@@ -1540,30 +1548,13 @@ def create_app() -> FastAPI:
             return Response("Доступ запрещён", status_code=403)
         if request.method == "POST" and not _same_origin(request):
             return Response("Запрос с другого сайта отклонён", status_code=403)
-        if path not in PUBLIC_PATHS and not path.startswith("/static/emoji/") \
-                and not token_valid(request.cookies.get(SESSION_COOKIE)):
+        if path not in PUBLIC_PATHS and not token_valid(request.cookies.get(SESSION_COOKIE)):
             if _is_htmx(request):
                 return Response(status_code=401, headers={"HX-Redirect": "/login"})
             return _redirect("/login")
         return await call_next(request)
 
     # ---------------------------------------------------------- kirish
-
-    @app.get("/static/emoji/{fname}")
-    async def emoji_file(fname: str):
-        """Animatsiyali emoji rasmlari — login sahifasida ham kerak, shuning uchun ochiq."""
-        import re as _re
-        if not _re.fullmatch(r"[a-z]+\.(webp|png)", fname):
-            return Response(status_code=404)
-        data = _EMOJI_CACHE.get(fname)
-        if data is None:
-            path = EMOJI_DIR / fname
-            if not path.is_file():
-                return Response(status_code=404)
-            data = _EMOJI_CACHE[fname] = path.read_bytes()
-        kind = "image/webp" if fname.endswith(".webp") else "image/png"
-        return Response(data, media_type=kind,
-                        headers={"Cache-Control": "public, max-age=2592000"})
 
     @app.get("/health")
     async def health():
@@ -1581,7 +1572,7 @@ def create_app() -> FastAPI:
         body = f"""<div style="min-height:100vh;display:grid;place-items:center;padding:20px">
 <div class="card" style="max-width:380px;width:100%;box-shadow:var(--shadow-lg)">
   <div style="text-align:center;margin-bottom:20px">
-    <div>{anim("truck", 64)}</div>
+    <div>{logo(60)}</div>
     <h1 style="margin-top:8px">BAXT TRANSPORT</h1>
     <div class="sub" style="margin:0">Панель диспетчера</div>
   </div>{msg}
@@ -1661,21 +1652,21 @@ def create_app() -> FastAPI:
         today = date.today()
         c = db.counters()
         kpis = [(c["active"], "активных грузов", "/cargos", "box"),
-                (c["today"], "пришло сегодня", "/cargos?status=", "fire"),
+                (c["today"], "пришло сегодня", "/cargos?status=", "inbox"),
                 (c["taken_week"], "взято · 7 дн.", "/history", "check")]
         import briefing
         hour = briefing.local_now().hour
-        greet = anim("sun" if 6 <= hour < 18 else "star", 32)
         hello = ("Доброе утро" if 5 <= hour < 12 else "Добрый день" if hour < 18
                  else "Добрый вечер" if hour < 23 else "Доброй ночи")
         subtitle = f"{_WEEKDAYS[today.weekday()].capitalize()}, {today.day} {_MONTHS[today.month - 1]}"
         plan_q = urlencode({"q": "Спланируй груз и обратный груз для каждой фуры"})
         hero = (f'<section class="hero fade"><div class="hero-top">'
-                f'<span class="brand-chip">{anim("truck", 22)} BAXT TRANSPORT</span>'
+                f'<span class="brand-chip">{logo(24, glass=True)} BAXT TRANSPORT</span>'
                 f'<a class="hero-btn" href="/chat?{plan_q}">{ic("spark", 14)} План</a></div>'
-                f'<h1>{hello}{greet}</h1><div class="hero-sub">{subtitle}</div>'
+                f'<h1>{hello}</h1><div class="hero-sub">{subtitle}</div>'
                 f'<div class="hero-kpis">' + "".join(
-                    f'<a class="hk" href="{href}">{anim(em, 22)}<b>{value}</b><span>{label}</span></a>'
+                    f'<a class="hk" href="{href}"><span class="hk-ic">{ic(em, 15)}</span>'
+                    f'<b>{value}</b><span>{label}</span></a>'
                     for value, label, href, em in kpis) + "</div></section>")
         return page("Сегодня",
                     hero
@@ -1716,7 +1707,7 @@ def create_app() -> FastAPI:
         url = f"/cargo/{res.cargo['id']}?taken=1&driver={1 if driver_ok else 0}"
         if not _is_htmx(request):
             return _redirect(url)
-        toast = _toast(f'{anim("party", 20)} Фура №{e(truck_id)} взяла: '
+        toast = _toast(f'{ic("check", 16)} Фура №{e(truck_id)} взяла: '
                        f'{route(res.cargo["from_city"], res.cargo["to_city"])}')
         path = urlparse(request.headers.get("hx-current-url", "")).path
         if path == "/":
@@ -1882,7 +1873,7 @@ def create_app() -> FastAPI:
   <div class="main"><a class="t route" href="/cargo/{r['id']}">{route(r['from_city'], r['to_city'])}</a>
     <div class="s">{_cargo_line(r)} · {_rate_text(r)} · {e(_day_text(r['load_date']))}</div>
     <div class="s">{e(r['source'] or '')} · {e(ago_phrase(r['created_at']))}</div>
-    <div class="s clamp">{e(r['raw_text'])}</div></div>
+    <div class="s clamp">{e(_preview(r['raw_text']))}</div></div>
   <span class="end">{_status_pill(r['status'])}</span></div>""")
         listing = (f'<div class="list">{"".join(items)}</div>' if items else
                    _empty("Таких грузов нет. Расширьте фильтр "
@@ -1907,7 +1898,7 @@ def create_app() -> FastAPI:
                 ("Водителю отправлено в Telegram." if driver == "1" else
                     "Водитель не подключён к боту — передайте рейс сами (Парк → фура → "
                     "в строке Telegram написано, как подключить).")
-            notes = _note("ok", f'{anim("party", 24)} Рейс назначен. {said}')
+            notes = _note("ok", f'Рейс назначен. {said}')
 
         via = ""
         try:
@@ -2206,9 +2197,9 @@ def create_app() -> FastAPI:
         return page("Рейсы",
                     top("Рейсы", "В пути и завершённые", tone="trips")
                     + _park_tabs("/history") + notes
-                    + f'<h2 class="sec"><span>{anim("truck", 22)} В пути</span> <small>{len(active_trips)}</small></h2>'
+                    + f'<h2 class="sec"><span>{ic("truck", 16)} В пути</span> <small>{len(active_trips)}</small></h2>'
                     + road_html
-                    + f'<h2 class="sec"><span>{anim("flag", 22)} Завершённые</span> <small>введите фактическую маржу — '
+                    + f'<h2 class="sec"><span>{ic("check", 16)} Завершённые</span> <small>введите фактическую маржу — '
                       'по ней уточняется прогноз</small></h2>'
                     + done_html, active="/history")
 
@@ -2279,7 +2270,7 @@ def create_app() -> FastAPI:
             for h in db.ai_history(WEB_CHAT_ID, limit=30, hours=72))
         if not history:
             import brain
-            history = (f'<div class="bubble ai fade">{anim("wave", 28)} '
+            history = (f'<div class="bubble ai fade">'
                        f'{brain.to_telegram_html(CHAT_WELCOME)}</div>')
         chips = "".join(
             f'<button type="button" class="chip" onclick="baxtAsk(this.textContent)">'
@@ -2327,14 +2318,11 @@ def create_app() -> FastAPI:
         counts = {"/rules": sum(1 for r in rules.list_rules() if r["status"] == "active"),
                   "/watches": len(db.active_watches())}
 
-        more_emoji = {"/stats": "chart", "/rules": "brain", "/watches": "bell",
-                      "/settings": "gear"}
-
         def row(href, label, icon, color):
             n = counts.get(href)
             badge = f'<span>{n}</span>' if n else ""
-            return (f'<a class="li" href="{href}"><span class="badge em-badge">'
-                    f'{anim(more_emoji.get(href, "sparkles"), 30)}</span>'
+            return (f'<a class="li" href="{href}"><span class="badge" style="background:{color}">'
+                    f'{ic(icon, 18)}</span>'
                     f'<div class="main"><span class="t">{label}</span></div>'
                     f'<span class="end">{badge}{ic("chevron", 16, "chev")}</span></a>')
 
@@ -2343,11 +2331,11 @@ def create_app() -> FastAPI:
         for title, items in groups:
             extra = ""
             if title == "Система":
-                extra = (f'<button class="li" onclick="baxtTheme()"><span class="badge em-badge">'
-                         f'{anim("sun", 30)}</span><div class="main">'
+                extra = (f'<button class="li" onclick="baxtTheme()"><span class="badge" '
+                         f'style="background:#5856d6">{ic("theme", 18)}</span><div class="main">'
                          f'<span class="t">Светлая / тёмная тема</span></div></button>'
                          f'<form method="post" action="/logout"><button class="li red">'
-                         f'<span class="badge em-badge">{anim("wave", 30)}'
+                         f'<span class="badge" style="background:#ff3b30">{ic("logout", 18)}'
                          f'</span><div class="main"><span class="t">Выйти</span></div>'
                          f'</button></form>')
             body += (f'<h2 class="sec">{title}</h2><div class="list">'
@@ -2693,7 +2681,7 @@ def _truck_offers(truck_id: str, n: int = 5) -> str:
     """Fura sahifasidagi takliflar bloki (o'tkazilganda shu blok yangilanadi)."""
     offers = "".join(_offer(o) for o in _best_offers(truck_id, n))
     if not offers:
-        offers = (f'<div class="empty-row" style="border-top:0"><span>{anim("eyes", 22)}Пока подходящих грузов нет</span>'
+        offers = (f'<div class="empty-row" style="border-top:0"><span>{ic("search", 16)}Пока подходящих грузов нет</span>'
                   f'{_ask_ai_button(f"Найди груз и обратный груз для фуры {truck_id}")}</div>')
     return f'<div class="card tcard fade" id="offers-{e(truck_id)}">{offers}</div>'
 
