@@ -68,7 +68,7 @@ _RAW = [
     # ---- Rossiya ----
     ("Moskva", 55.7558, 37.6173, "RU", "москва|moscow|moskva|мск|масква"),
     ("Sankt-Peterburg", 59.9311, 30.3609, "RU", "санкт-петербург|питер|спб|saint petersburg|sankt-peterburg|petersburg"),
-    ("Qozon", 55.7887, 49.1221, "RU", "казань|қозон|kazan|qozon"),
+    ("Qozon", 55.7887, 49.1221, "RU", "казань|қозон|kazan|qozon|татарстан|tatariston|tatarstan"),
     ("Yekaterinburg", 56.8389, 60.6057, "RU", "екатеринбург|екб|yekaterinburg|ekaterinburg"),
     ("Novosibirsk", 55.0084, 82.9357, "RU", "новосибирск|новосиб|novosibirsk"),
     ("Chelyabinsk", 55.1644, 61.4368, "RU", "челябинск|chelyabinsk"),

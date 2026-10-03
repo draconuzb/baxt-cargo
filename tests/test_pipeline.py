@@ -186,3 +186,25 @@ def test_db_connections_are_closed(clean_db):
 def test_db_uses_wal(clean_db):
     with clean_db.connect() as conn:
         assert conn.execute("PRAGMA journal_mode").fetchone()[0].lower() == "wal"
+
+
+# ---------------------------------------------------------------- qayta hisob (formula o'zgargach)
+
+def test_rescore_open_updates_and_cancels(park, sent):
+    """Ochiq taklif yangi formula bilan qayta hisoblanadi; mos kelmay qolgani bekor."""
+    ids = pipeline.handle_message(
+        "Есть груз Ташкент → Москва, 20т тент, 4000$, 22.09", source="grp1")
+    cid = ids[0]
+    m = park.find_match(cid, "01")
+    assert m is not None
+    with park.connect() as conn:                       # eski formula qoldig'i
+        conn.execute("UPDATE matches SET margin_usd=99999 WHERE id=?", (m["id"],))
+    out = pipeline.rescore_open(hours=72)
+    assert out["updated"] >= 1
+    assert park.get_match(m["id"])["margin_usd"] < 99999
+
+    # yuk endi mos kelmaydi (yo'nalish bir shahar) — ochiq taklif bekor bo'ladi
+    with park.connect() as conn:
+        conn.execute("UPDATE cargos SET to_city='Toshkent' WHERE id=?", (cid,))
+    pipeline.rescore_open(hours=72)
+    assert park.get_match(m["id"])["decision"] == "cancelled"

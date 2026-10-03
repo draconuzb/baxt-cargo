@@ -265,3 +265,27 @@ def test_roundtrip_skips_same_cargo(truck_tent, costs):
     """Bir xil yuk qaytish yuki sifatida taklif qilinmaydi."""
     out = cargo(id=7)
     assert scoring.best_roundtrip(out, truck_tent, [cargo(id=7)], costs) == []
+
+
+# ---------------------------------------------------------------- shubhali narx
+
+def test_suspicious_rate_is_not_used_for_margin(truck_tent, costs):
+    """Toshkent→Shymkent (150 km) uchun $41 667 — o'qish xatosi: marja hisoblanmaydi."""
+    c = cargo(to_city="Shymkent", rate=20_000_000.0, currency="KZT", rate_usd=41_667.0,
+              load_date=None)
+    assert scoring.rate_suspicious(c)
+    r = scoring.evaluate(c, truck_tent, costs)
+    assert r["ok"] and r["margin_usd"] is None and r.get("rate_suspect")
+    assert any("проверьте" in w for w in r["warnings"])
+
+
+def test_normal_rates_are_not_suspicious():
+    assert not scoring.rate_suspicious(cargo())                              # $4000 Moskva
+    assert not scoring.rate_suspicious(cargo(rate_usd=9000.0))               # qimmat, lekin bo'ladi
+    assert not scoring.rate_suspicious(cargo(to_city="Chirchiq", rate_usd=400.0))
+    assert not scoring.rate_suspicious(cargo(to_city=None, rate_usd=99_000.0))  # km noma'lum
+
+
+def test_same_city_route_rejected(truck_tent, costs):
+    r = scoring.evaluate(cargo(to_city="Toshkent"), truck_tent, costs)
+    assert not r["ok"] and any("совпадает" in x for x in r["reasons"])

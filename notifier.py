@@ -76,7 +76,7 @@ def format_card(cargo: dict, result: dict, insight: list[str] | None = None) -> 
     lines = [
         "🔥 <b>НОВЫЙ ГРУЗ</b>",
         f"<b>{cargo.get('from_city')} → {cargo.get('to_city')}</b>",
-        f"💵 <b>{rate}</b>",
+        f"💵 <b>{rate}</b>" + (" ❓" if result.get("rate_suspect") else ""),
         f"{body}{temp} · {weight}" + (f" · {cargo['load_date']}" if cargo.get("load_date") else ""),
         "",
         f"🚛 <b>Машина №{result['truck_id']}</b> — пустой пробег {result['empty_km']} км",

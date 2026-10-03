@@ -144,6 +144,37 @@ def rematch_all(hours: int = 24, truck_ids: list[str] | None = None) -> int:
     return written
 
 
+def rescore_open(hours: int = 72) -> dict[str, int]:
+    """Aktiv yuklarning OCHIQ takliflarini joriy formula bilan qayta hisoblaydi.
+
+    `save_match` mavjud taklifga tegmaydi, shuning uchun hisob qoidasi
+    o'zgarganda (masalan, shubhali narx) eski raqamlar bazada qolib ketadi.
+    Endi mos kelmaydigan taklif `cancelled` (statistikaga kirmaydi), qolganining
+    marjasi va bali yangilanadi. Dispetcher qarori bor takliflarga tegilmaydi.
+    """
+    trucks = {t["id"]: t for t in db.get_trucks(active_only=False)}
+    out = {"updated": 0, "cancelled": 0}
+    for row in db.active_cargos(hours=hours):
+        cargo = {k: row[k] for k in row.keys()}
+        for m in db.matches_for_cargo(cargo["id"]):
+            truck = trucks.get(m["truck_id"])
+            if m["decision"] is not None or truck is None:
+                continue
+            try:
+                r = scoring.evaluate(cargo, truck)
+            except Exception:
+                log.exception("Qayta hisobda xato: taklif #%s", m["id"])
+                continue
+            if r["ok"]:
+                db.update_match_calc(m["id"], r)
+                out["updated"] += 1
+            else:
+                db.set_decision(m["id"], "cancelled")
+                out["cancelled"] += 1
+    log.info("Takliflar qayta hisoblandi: %s", out)
+    return out
+
+
 def rematch_cargo(cargo_id: int) -> int:
     """Bitta yuk uchun takliflarni qayta ochadi (reys bekor qilinganda)."""
     row = db.get_cargo(cargo_id)

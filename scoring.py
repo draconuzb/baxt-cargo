@@ -41,6 +41,32 @@ def _clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
     return max(lo, min(hi, x))
 
 
+# ---------------------------------------------------------------- narx ishonchliligi
+
+# Yuk narxi odatda 0.7–2.5 $/km. Undan bir necha barobar qimmat narx — deyarli
+# har doim e'lonni noto'g'ri o'qish ("200000.00 KZT" -> 20 mln, "1.500.000 mln").
+# Bunday narx bilan hisoblangan "marja" ro'yxat boshiga chiqib, AI ham uni eng
+# foydali deb tavsiya qiladi. Qisqa reysda km narxi tabiiy baland — pastki chegara.
+MAX_RATE_PER_KM = 6.0
+SUSPECT_FLOOR_USD = 1500.0
+
+
+def rate_suspicious(cargo, loaded_km: float | None = None) -> bool:
+    """Narx haqiqatga to'g'ri kelmaydimi (e'lonni o'qishdagi xato)."""
+    c = _as_dict(cargo)
+    usd = c.get("rate_usd")
+    if usd is None:
+        usd = config.to_usd(c.get("rate"), c.get("currency"))
+    if not usd:
+        return False
+    if loaded_km is None:
+        a, b = geo.CITIES.get(c.get("from_city") or ""), geo.CITIES.get(c.get("to_city") or "")
+        if not a or not b:
+            return False
+        loaded_km = geo.haversine_km(a, b) * geo.road_factor_for(a.country, b.country)
+    return usd > max(SUSPECT_FLOOR_USD, loaded_km * MAX_RATE_PER_KM)
+
+
 def market_rate(from_city: str | None, to_city: str | None, costs) -> float:
     """Shu yo'nalish uchun bozor stavkasi ($/km).
 
@@ -64,6 +90,9 @@ def market_rate(from_city: str | None, to_city: str | None, costs) -> float:
 def hard_checks(c: dict, t: dict, costs) -> list[str]:
     """Umuman mos kelmaydigan sabablar ro'yxati (bo'sh bo'lsa — mos)."""
     fails = []
+
+    if c.get("from_city") and c.get("from_city") == c.get("to_city"):
+        fails.append("город отправки совпадает с городом назначения")
 
     if c.get("weight_t") and t.get("capacity_t") and c["weight_t"] > t["capacity_t"] + 0.5:
         fails.append(f"вес {c['weight_t']} т > грузоподъёмность {t['capacity_t']} т")
@@ -136,6 +165,12 @@ def evaluate(cargo, truck, costs=None, ignore_date: bool = False) -> dict:
     revenue = c.get("rate_usd")
     if revenue is None:
         revenue = config.to_usd(c.get("rate"), c.get("currency"))
+    if revenue and rate_suspicious(c, loaded_km):
+        # Noto'g'ri o'qilgan narx bilan marja hisoblanmaydi — yuk "narxi
+        # noma'lum" bo'lib qoladi (ro'yxat boshiga chiqmaydi, AI tavsiya qilmaydi)
+        res["rate_suspect"] = True
+        res["warnings"].append("ставка похожа на ошибку разбора — проверьте объявление")
+        revenue = None
 
     trip_days = max(1.0, (total_km / (costs.avg_speed_kmh * costs.driving_hours_per_day)) + 1)
 
@@ -168,7 +203,8 @@ def evaluate(cargo, truck, costs=None, ignore_date: bool = False) -> dict:
         res["margin_usd"] = None
         res["margin_per_day"] = None
         res["rate_per_km"] = None
-        res["warnings"].append("ставка не указана — маржа не рассчитана")
+        if not res.get("rate_suspect"):
+            res["warnings"].append("ставка не указана — маржа не рассчитана")
 
     # Kompaniya qoidalari (rules.py) — marjaga tegmaydi, faqat to'sadi yoki
     # ballni suradi. Qoidalar modulidagi xato hisobni to'xtatmaydi.

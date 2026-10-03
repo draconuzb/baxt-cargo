@@ -96,9 +96,15 @@ _RE_WEIGHT_T = re.compile(
 _RE_WEIGHT_KG = re.compile(r"(\d{3,6})\s*(?:кг|kg)\b")
 _RE_VOLUME = re.compile(r"(\d{1,3})\s*(?:куб\w*|м3|m3|м³)")
 
+# Raqam boshidan boshlanadi: "1.500.000 mln" dagi "500.000 mln" ni
+# alohida o'qib, 500 mln qilib yubormaslik uchun (bunday xato bo'lgan).
 _RE_MLN = re.compile(
-    r"(\d{1,3}(?:[.,]\d{1,3})?)\s*(?:млн|mln|миллион\w*|mln\.)\s*"
+    r"(?<![\d.,])(?<!\d )(\d{1,3}(?:[.,]\d{1,3})?)\s*(?:млн|mln|миллион\w*|mln\.)\s*"
     r"(?:сум|сўм|so'?m|sum|uzs)?"
+)
+# "1.500.000 mln", "1 500 000 млн" — to'liq summa, "mln" ortiqcha yozilgan
+_RE_MLN_FULL = re.compile(
+    r"(?<![\d.,])(\d{1,3}(?:[ .,]\d{3}){2,})\s*(?:млн|mln|миллион\w*)"
 )
 # Pul raqami: "4 200", "4.200", "4200", "4200.50" ni tanaydi, lekin
 # "реф -18, 1800$" dagi ikki alohida sonni bitta raqamga qo'shib yubormaydi:
@@ -165,8 +171,27 @@ def _parse_weight(t: str) -> float | None:
     return None
 
 
+def _money(s: str) -> float | None:
+    """Pul soni: "4 200" / "4.200" -> 4200; "200000.00" (tiyini bilan) -> 200000.
+
+    Tiyin ".00" raqamga qo'shilib ketsa narx 100 barobar oshadi —
+    "200000.00 KZT" 20 mln tenge ($41 000) bo'lib, AI uni eng foydali deb
+    tavsiya qilgan.
+    """
+    s = s.strip().replace(" ", "")
+    m = re.fullmatch(r"(\d+)[.,]\d{1,2}", s)
+    if m:
+        return float(m.group(1))
+    return _num(s, decimal=False)
+
+
 def _parse_rate(t: str) -> tuple[float | None, str | None, bool]:
     per_ton = bool(_RE_PER_TON.search(t))
+    m = _RE_MLN_FULL.search(t)
+    if m:
+        v = _num(m.group(1), decimal=False)
+        if v and v >= 100_000:
+            return v, "UZS", per_ton
     m = _RE_MLN.search(t)
     if m:
         v = _num(m.group(1))
@@ -174,22 +199,22 @@ def _parse_rate(t: str) -> tuple[float | None, str | None, bool]:
             return v * 1_000_000, "UZS", per_ton
     m = _RE_USD.search(t)
     if m:
-        v = _num(m.group(1) or m.group(2), decimal=False)
+        v = _money(m.group(1) or m.group(2))
         if v and 50 <= v <= 100_000:
             return v, "USD", per_ton
     m = _RE_UZS.search(t)
     if m:
-        v = _num(m.group(1), decimal=False)
+        v = _money(m.group(1))
         if v and v >= 100_000:
             return v, "UZS", per_ton
     m = _RE_RUB.search(t)
     if m:
-        v = _num(m.group(1), decimal=False)
+        v = _money(m.group(1))
         if v and v >= 1000:
             return v, "RUB", per_ton
     m = _RE_KZT.search(t)
     if m:
-        v = _num(m.group(1), decimal=False)
+        v = _money(m.group(1))
         if v and v >= 10_000:
             return v, "KZT", per_ton
     return None, None, per_ton
@@ -290,6 +315,9 @@ _FROM_SUFFIXES = ("dan", "дан")
 _TO_SUFFIXES = ("gacha", "гача", "ga", "га", "ka", "ка", "qa")
 _FROM_PREPS = {"из", "с", "со", "от", "iz"}
 _TO_PREPS = {"в", "во", "до", "на"}
+# Shablonli e'lonlar: "📍 Qayerdan: Tatariston ... 🏁 Qayerga: Toshkent shahri"
+_FROM_LABELS = {"qayerdan", "откуда", "погрузка", "загрузка", "yuklash"}
+_TO_LABELS = {"qayerga", "куда", "выгрузка", "разгрузка", "tushirish"}
 
 
 def _route_role(words: list[str], i: int) -> str | None:
@@ -305,6 +333,12 @@ def _route_role(words: list[str], i: int) -> str | None:
         return "from"
     if prev in _TO_PREPS:
         return "to"
+    # Yorliq shahardan 1–2 so'z oldin: "Qayerga: Toshkent", "Загрузка: г. Москва"
+    for back in words[max(0, i - 2):i]:
+        if back in _FROM_LABELS:
+            return "from"
+        if back in _TO_LABELS:
+            return "to"
     return None
 
 

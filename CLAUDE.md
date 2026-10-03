@@ -178,3 +178,13 @@ Har qanday o'zgartirishdan keyin `python main.py demo` va `pytest` ishlashi shar
 30. **Takliflar tartibi** (`web._rank_offers`): narxi bor foydali yuklar kunlik
     marja bo'yicha → narxi yozilmaganlar ("≥ $X so'rang", `_ask_price`) →
     zararlilar. `score` bo'yicha saralamang: narx noma'lum yuk ham 100 ball oladi.
+31. **Narx ishonchliligi:** `scoring.rate_suspicious` — $1500 dan qimmat va
+    6 $/km dan ortiq narx deyarli har doim e'lonni noto'g'ri o'qish
+    ("200000.00 KZT" -> 20 mln, "1.500.000 mln" -> 500 mln). Bunday narx bilan
+    marja hisoblanmaydi (`rate_suspect`), panelda "проверьте цену", kartochkada ❓.
+    Aks holda absurd "marja" ro'yxat boshiga chiqadi va AI uni tavsiya qiladi.
+    `from_city == to_city` — mos emas. Formula o'zgarsa serverda
+    `python main.py rescore` (`save_match` mavjud taklifga tegmaydi).
+32. **Mavzu doim yorug'** (buyurtmachi: Telegram tunda panel qop-qora ochilardi).
+    Qorong'i — faqat "Ещё → тема" tanlansa (`data-theme="dark"`, grafit, qora
+    emas). `prefers-color-scheme` ishlatilmaydi (`test_light_theme_is_default`).

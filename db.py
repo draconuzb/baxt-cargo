@@ -685,6 +685,16 @@ def revive_match(cargo_id: int, truck_id: str, result: dict) -> int | None:
         return row["id"]
 
 
+def update_match_calc(match_id: int, result: dict) -> None:
+    """Ochiq taklifning hisobini yangilaydi (hisob qoidasi o'zgarganda — `rescore`)."""
+    with connect() as conn:
+        conn.execute(
+            "UPDATE matches SET score=?, empty_km=?, loaded_km=?, margin_usd=?, details=?"
+            " WHERE id=? AND decision IS NULL",
+            (result["score"], result["empty_km"], result["loaded_km"], result["margin_usd"],
+             json.dumps(result, default=str), match_id))
+
+
 def find_match(cargo_id: int, truck_id: str) -> sqlite3.Row | None:
     """Shu yuk + mashina uchun qaror qabul qilinmagan moslik (panel tugmalari)."""
     with connect() as conn:

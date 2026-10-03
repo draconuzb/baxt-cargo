@@ -378,6 +378,12 @@ def cmd_watchdog(args):
     print("\n".join(problems.values()) or "hammasi joyida")
 
 
+def cmd_rescore(args):
+    """Ochiq takliflarni joriy formula bilan qayta hisoblash (formula o'zgargach)."""
+    db.init()
+    print(pipeline.rescore_open(hours=args.hours))
+
+
 def cmd_learn(args):
     """Qarorlardan naqsh qidirish va qoida taklif qilish."""
     import learn
@@ -418,6 +424,8 @@ def main():
     p = sub.add_parser("ai"); p.add_argument("text", nargs="*")
     p.add_argument("--chat"); p.set_defaults(func=cmd_ai)
     p = sub.add_parser("learn"); p.set_defaults(func=cmd_learn)
+    p = sub.add_parser("rescore"); p.add_argument("--hours", type=int, default=72)
+    p.set_defaults(func=cmd_rescore)
     p = sub.add_parser("watchdog"); p.set_defaults(func=cmd_watchdog)
     p = sub.add_parser("ai-eval"); p.add_argument("--models")
     p.add_argument("--limit", type=int); p.add_argument("--pause", type=float, default=8.0)

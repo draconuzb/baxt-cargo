@@ -129,6 +129,8 @@ def _rate_text(row) -> str:
         text = f"{row['rate']:,.0f} {row['currency']}".replace(",", " ")
     if row["currency"] != "USD" and row["rate_usd"]:
         text += f' <span class="muted">≈{money(row["rate_usd"])}</span>'
+    if _suspect(row):
+        text += ' <span class="suspect-tag">— проверьте цену</span>'
     return text
 
 
@@ -367,36 +369,30 @@ CSS = """
 --text:#1c1c1e;--muted:#8a8a8e;
 --ok:#34c759;--ok-bg:rgba(52,199,89,.15);--warn:#ff9500;--warn-bg:rgba(255,149,0,.16);
 --bad:#ff3b30;--bad-bg:rgba(255,59,48,.14);--info-bg:rgba(0,122,255,.10);--track:#e5e5ea;
---nav-bg:rgba(255,255,255,.72);--nav-brd:rgba(60,60,67,.14);
+--ok-text:#1a8a3a;--warn-text:#b35c00;
+--nav-bg:rgba(255,255,255,.78);--nav-brd:rgba(60,60,67,.14);
 --shadow:0 1px 2px rgba(15,23,42,.06),0 6px 20px rgba(15,23,42,.05);
 --shadow-lg:0 12px 40px rgba(15,23,42,.14);
 --r:20px;--r-sm:13px;--nav:250px;
 color-scheme:light}
-/* Qorong'i rejim — iOS true-black grouped (tizim sozlamasi bo'yicha) */
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
---brand:#0a84ff;--brand-soft:rgba(10,132,255,.24);
---bg:#000;--surface:#1c1c1e;--surface-2:#2c2c2e;--surface-3:#3a3a3c;
---border:rgba(84,84,88,.4);--border-2:rgba(84,84,88,.6);
---text:#f5f5f7;--muted:#98989f;
---ok:#30d158;--ok-bg:rgba(48,209,88,.18);--warn:#ff9f0a;--warn-bg:rgba(255,159,10,.18);
---bad:#ff453a;--bad-bg:rgba(255,69,58,.18);--info-bg:rgba(10,132,255,.16);--track:#3a3a3c;
---nav-bg:rgba(28,28,30,.7);--nav-brd:rgba(84,84,88,.5);
---shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lg:0 14px 44px rgba(0,0,0,.6);
-color-scheme:dark}}
+/* Qorong'i rejim — faqat foydalanuvchi tanlasa ("Ещё" → tema). Buyurtmachi:
+   Telegram tunda qop-qora panel ochardi ("juda temniy"). Endi yumshoq grafit. */
 :root[data-theme="dark"]{
---brand:#0a84ff;--brand-soft:rgba(10,132,255,.24);
---bg:#000;--surface:#1c1c1e;--surface-2:#2c2c2e;--surface-3:#3a3a3c;
---border:rgba(84,84,88,.4);--border-2:rgba(84,84,88,.6);
---text:#f5f5f7;--muted:#98989f;
---ok:#30d158;--ok-bg:rgba(48,209,88,.18);--warn:#ff9f0a;--warn-bg:rgba(255,159,10,.18);
---bad:#ff453a;--bad-bg:rgba(255,69,58,.18);--info-bg:rgba(10,132,255,.16);--track:#3a3a3c;
---nav-bg:rgba(28,28,30,.7);--nav-brd:rgba(84,84,88,.5);
---shadow:0 1px 2px rgba(0,0,0,.5);--shadow-lg:0 14px 44px rgba(0,0,0,.6);
+--brand:#3b8cff;--brand-soft:rgba(59,140,255,.20);
+--bg:#15171c;--surface:#1f2228;--surface-2:#272b33;--surface-3:#323741;
+--border:rgba(255,255,255,.08);--border-2:rgba(255,255,255,.14);
+--text:#eef0f3;--muted:#9aa1ad;
+--ok:#34c759;--ok-bg:rgba(52,199,89,.16);--warn:#ff9f0a;--warn-bg:rgba(255,159,10,.16);
+--bad:#ff5a52;--bad-bg:rgba(255,90,82,.16);--info-bg:rgba(59,140,255,.14);--track:#323741;
+--ok-text:#4cd964;--warn-text:#ffb340;
+--nav-bg:rgba(31,34,40,.86);--nav-brd:rgba(255,255,255,.08);
+--shadow:0 1px 2px rgba(0,0,0,.35);--shadow-lg:0 14px 44px rgba(0,0,0,.45);
 color-scheme:dark}
 
 *{box-sizing:border-box}
 html{height:100%;-webkit-text-size-adjust:100%}
-body{margin:0;min-height:100%;background:var(--bg);color:var(--text);
+body{margin:0;min-height:100%;color:var(--text);
+background:radial-gradient(1100px 340px at 50% -140px,var(--brand-soft),transparent 70%) no-repeat,var(--bg);
 font:16px/1.47 -apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",
 "Segoe UI",Roboto,system-ui,sans-serif;letter-spacing:-.01em;
 -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
@@ -488,8 +484,7 @@ form.inline{display:inline-flex}
 .seg a{padding:6px 15px;border-radius:9px;font-size:14px;font-weight:600;color:var(--text)}
 .seg a:active{opacity:.6}
 .seg a.on{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.14)}
-:root[data-theme="dark"] .seg a.on,
-:root:not([data-theme="light"]) .seg a.on{background:#636366}
+:root[data-theme="dark"] .seg a.on{background:#4a4f5a}
 
 /* --- iOS switch --- */
 .switch{position:relative;display:inline-flex;align-items:center;gap:10px;cursor:pointer;
@@ -560,6 +555,45 @@ h1 .em{margin-left:6px;vertical-align:-4px}
 .road .bar{margin-top:0}
 .road .rider{position:absolute;top:-24px;transform:scaleX(-1)}
 .empty-row .em{margin-right:6px}
+/* bosh sahifa sarlavhasi (gradient) */
+.hero{position:relative;overflow:hidden;border-radius:24px;padding:16px 16px 14px;margin:2px 0 6px;
+color:#fff;background:linear-gradient(135deg,#0a6cff 0%,#4f46e5 58%,#7c3aed 100%);
+box-shadow:0 12px 30px rgba(79,70,229,.28)}
+.hero:before{content:"";position:absolute;right:-70px;top:-80px;width:230px;height:230px;
+border-radius:50%;background:radial-gradient(rgba(255,255,255,.30),transparent 68%)}
+.hero>*{position:relative}
+.hero-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.brand-chip{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;
+letter-spacing:.08em;text-transform:uppercase}
+.hero h1{font-size:32px;font-weight:800;letter-spacing:-.03em;margin:10px 0 0;color:#fff;
+display:flex;align-items:center;gap:6px}
+.hero h1 .em{margin:0}
+.hero-sub{opacity:.88;font-size:15px;margin-top:1px}
+.hero-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.2);color:#fff;
+border-radius:999px;padding:7px 13px;font-weight:600;font-size:14px}
+.hero-btn:active{opacity:.7}
+.hero-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:14px}
+.hk{background:rgba(255,255,255,.16);border-radius:16px;padding:10px 11px;color:#fff;display:block;
+border:.5px solid rgba(255,255,255,.18)}
+.hk:active{background:rgba(255,255,255,.26)}
+.hk b{display:block;font-size:24px;font-weight:700;line-height:1.15;letter-spacing:-.02em;
+font-variant-numeric:tabular-nums}
+.hk span{font-size:12px;opacity:.9;font-weight:500}
+.hk .em{float:right}
+/* fura holati — rangli belgi */
+.spill{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;
+padding:2px 9px 2px 8px;border-radius:999px;white-space:nowrap;vertical-align:1px}
+.spill:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.spill.s-free{background:var(--ok-bg);color:var(--ok-text)}
+.spill.s-trip{background:var(--info-bg);color:var(--brand)}
+.spill.s-later{background:var(--warn-bg);color:var(--warn-text)}
+.spill.s-off{background:var(--surface-3);color:var(--muted)}
+/* ikkinchi darajali tugma — rangli (kulrang emas) */
+.btn.tint{background:var(--brand-soft);color:var(--brand)}
+/* narxi shubhali (e'lonni o'qishda xato bo'lishi mumkin) */
+.deal .pd.suspect{color:var(--warn-text);font-size:18px}
+.deal .pd.suspect small{font-size:12px;font-weight:600;display:block;text-align:right}
+.suspect-tag{color:var(--warn-text);font-weight:600}
 /* boshqa fura tanlash */
 .alts:empty{display:none}
 .offer .alts{flex-basis:100%}
@@ -908,18 +942,21 @@ def _section(active: str) -> str:
 # Rejim tanlovi brauzerda saqlanadi; sahifa chizilishidan oldin qo'llanadi,
 # aks holda yorug'dan qorong'iga "sakrash" ko'rinadi.
 THEME_JS = """<script>
-(function(){try{var t=localStorage.getItem('baxt-theme');
-if(t)document.documentElement.dataset.theme=t}catch(e){}})();
+(function(){var t='light';try{t=localStorage.getItem('baxt-theme')||'light'}catch(e){}
+document.documentElement.dataset.theme=t==='dark'?'dark':'light';})();
 function baxtTheme(){var r=document.documentElement;
-var cur=r.dataset.theme||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
-var next=cur==='dark'?'light':'dark';r.dataset.theme=next;
-try{localStorage.setItem('baxt-theme',next)}catch(e){}}
+var next=r.dataset.theme==='dark'?'light':'dark';r.dataset.theme=next;
+try{localStorage.setItem('baxt-theme',next)}catch(e){}baxtTgColors();}
+function baxtTgColors(){var w=window.Telegram&&Telegram.WebApp;if(!w||!w.initData)return;
+var bg=getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
+try{w.setHeaderColor(bg);w.setBackgroundColor(bg);
+if(w.setBottomBarColor)w.setBottomBarColor(bg);}catch(e){}}
 </script>"""
 
 # Telegram ichida ochilganda: to'liq ekran va Telegram mavzusiga moslashish
 TG_JS = """<script src="https://telegram.org/js/telegram-web-app.js" defer></script>
 <script>addEventListener('DOMContentLoaded',function(){var w=window.Telegram&&Telegram.WebApp;
-if(w&&w.initData){w.ready();w.expand();}});</script>"""
+if(w&&w.initData){w.ready();w.expand();baxtTgColors();}});</script>"""
 
 import urllib.parse as _up
 
@@ -962,8 +999,7 @@ def page(title: str, body: str, active: str = "", head: str = "",
     layout = "" if nav else "<style>body{grid-template-columns:1fr}</style>"
     html = f"""<!doctype html><html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2f2f7">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <title>{e(title)} — BAXT</title><link rel="icon" href="{FAVICON}">
 <style>{CSS}</style>{layout}{THEME_JS}
@@ -1109,7 +1145,7 @@ def _taken_card(res, driver_ok: bool) -> str:
   <div class="acts"><form method="post" action="/trip/{mid}/undo" class="inline"
     onsubmit="return confirm('Отменить рейс?')">
     <button class="btn sm">{ic("refresh", 15)} Отменить</button></form>
-    <a class="btn sm" href="/truck/{e(truck_id)}">{ic("truck", 15)} Фура №{e(truck_id)}</a></div>
+    <a class="btn sm tint" href="/truck/{e(truck_id)}">{ic("truck", 15)} Фура №{e(truck_id)}</a></div>
 </div>"""
 
 
@@ -1169,11 +1205,23 @@ def _price_short(row) -> str | None:
     return f"{rate:,.0f} {cur}".replace(",", " ")
 
 
+def _suspect(row) -> bool:
+    """Narx e'lonni noto'g'ri o'qishdan chiqqanga o'xshaydimi (`scoring.rate_suspicious`)."""
+    try:
+        return scoring.rate_suspicious(row)
+    except (KeyError, IndexError, TypeError, ValueError):
+        return False
+
+
 def _price_big(row) -> str:
     """Taklifning o'ng tomonidagi katta yashil raqam — yuk narxi (buyurtmachi talabi).
 
-    Narx yozilmagan bo'lsa — qancha so'rash kerakligi (to'q sariq)."""
+    Narx yozilmagan bo'lsa — qancha so'rash kerakligi (to'q sariq). Narx
+    shubhali bo'lsa — to'q sariq va "проверьте" (hisobga olinmagan)."""
     price = _price_short(row)
+    if price and _suspect(row):
+        return (f'<div class="pd suspect" title="Цена похожа на ошибку разбора — '
+                f'проверьте объявление">{e(price)}?<small>проверьте цену</small></div>')
     if price:
         return f'<div class="pd">{e(price)}</div>'
     ask = _ask_price(_details(row)) if "details" in row.keys() else None
@@ -1238,7 +1286,7 @@ def _best_offers(truck_id: str, n: int) -> list:
 
 
 def _ask_ai_button(question: str, label: str = "Спросить AI") -> str:
-    return (f'<a class="btn sm" href="/chat?{urlencode({"q": question})}">'
+    return (f'<a class="btn sm tint" href="/chat?{urlencode({"q": question})}">'
             f'{ic("spark", 14)} {label}</a>')
 
 
@@ -1299,8 +1347,8 @@ def _truck_card(t, offers, trips=()) -> str:
     snow = anim("snow", 16) if t["body_type"] == "ref" else ""
     header = f"""<a class="li" href="/truck/{e(t['id'])}"><span class="tnum big">№{e(t['id'])}</span>
   <div class="main"><span class="t">{title}</span>
-  <div class="s"><span class="tstate"><span class="dot s-{state}"></span>{e(label)}</span>
-  · {snow}{e(body)}{e(temp)} · {t['capacity_t'] or 0:g} т</div></div>
+  <div class="s"><span class="spill s-{state}">{e(label)}</span>
+  {snow}{e(body)}{e(temp)} · {t['capacity_t'] or 0:g} т</div></div>
   <span class="end">{anim(_STATE_EMOJI[state], 32)}{ic("chevron", 16, "chev")}</span></a>"""
     parts = [header] + [_trip_block(tr) for tr in trips]
     if not t["active"]:
@@ -1327,8 +1375,8 @@ def _truck_row(t, trips=()) -> str:
     driver = f" · {e(t['driver'])}" if t["driver"] else ""
     return f"""<a class="li" href="/truck/{e(t['id'])}"><span class="tnum big">№{e(t['id'])}</span>
   <div class="main"><span class="t">{title}</span>
-  <div class="s"><span class="tstate"><span class="dot s-{state}"></span>{e(label)}</span>
-  · {e(body)} {t['capacity_t'] or 0:g} т{driver}</div></div>
+  <div class="s"><span class="spill s-{state}">{e(label)}</span>
+  {e(body)} {t['capacity_t'] or 0:g} т{driver}</div></div>
   <span class="end">{ic("chevron", 16, "chev")}</span></a>"""
 
 
@@ -1484,18 +1532,22 @@ def create_app() -> FastAPI:
         kpis = [(c["active"], "активных грузов", "/cargos", "box"),
                 (c["today"], "пришло сегодня", "/cargos?status=", "fire"),
                 (c["taken_week"], "взято · 7 дн.", "/history", "check")]
-        kpi_html = '<div class="kpis">' + "".join(
-            f'<a class="kpi" href="{href}">{anim(em, 26)}<b>{value}</b><span>{label}</span></a>'
-            for value, label, href, em in kpis) + "</div>"
         import briefing
         hour = briefing.local_now().hour
-        greet = anim("sun" if 6 <= hour < 18 else "star", 34)
+        greet = anim("sun" if 6 <= hour < 18 else "star", 32)
+        hello = ("Доброе утро" if 5 <= hour < 12 else "Добрый день" if hour < 18
+                 else "Добрый вечер" if hour < 23 else "Доброй ночи")
         subtitle = f"{_WEEKDAYS[today.weekday()].capitalize()}, {today.day} {_MONTHS[today.month - 1]}"
+        plan_q = urlencode({"q": "Спланируй груз и обратный груз для каждой фуры"})
+        hero = (f'<section class="hero fade"><div class="hero-top">'
+                f'<span class="brand-chip">{anim("truck", 22)} BAXT TRANSPORT</span>'
+                f'<a class="hero-btn" href="/chat?{plan_q}">{ic("spark", 14)} План</a></div>'
+                f'<h1>{hello}{greet}</h1><div class="hero-sub">{subtitle}</div>'
+                f'<div class="hero-kpis">' + "".join(
+                    f'<a class="hk" href="{href}">{anim(em, 22)}<b>{value}</b><span>{label}</span></a>'
+                    for value, label, href, em in kpis) + "</div></section>")
         return page("Сегодня",
-                    top(f"Сегодня{greet}", subtitle, right=f'<a class="btn sm" href="/chat?'
-                        f'{urlencode({"q": "Спланируй груз и обратный груз для каждой фуры"})}">'
-                        f'{ic("spark", 14)} План</a>')
-                    + kpi_html
+                    hero
                     + '<h2 class="sec">Фуры <small>самые выгодные сверху</small></h2>'
                     + f"""<div class="grid fade" id="fleet"
      hx-get="/fragment/fleet" hx-trigger="every 45s"
@@ -1681,7 +1733,7 @@ def create_app() -> FastAPI:
 
         active_filters = sum(1 for k in ("from", "to", "body", "min_score", "q") if q.get(k))
         filters = f"""<details class="fdet"{' open' if active_filters else ''}>
-<summary class="btn sm">{ic("filter", 15)} Фильтр{f' · {active_filters}' if active_filters else ''}</summary>
+<summary class="btn sm tint">{ic("filter", 15)} Фильтр{f' · {active_filters}' if active_filters else ''}</summary>
 <form class="filters" method="get">
   <div><label>Откуда</label><input name="from" value="{e(q.get('from', ''))}" list="cities" size="12"></div>
   <div><label>Куда</label><input name="to" value="{e(q.get('to', ''))}" list="cities" size="12"></div>
@@ -1786,7 +1838,7 @@ def create_app() -> FastAPI:
         listing = (f'<div class="list">{"".join(_truck_row(t, db.active_trips(t["id"])) for t in trucks)}</div>'
                    if trucks else _note("info", "Парк пуст — загрузите trucks.json командой "
                                                 "<code>python main.py init</code>."))
-        add_btn = f'<a class="btn sm primary" href="/trucks/new">{ic("plus", 15)} Фура</a>'
+        add_btn = f'<a class="btn sm tint" href="/trucks/new">{ic("plus", 15)} Фура</a>'
         count = f"{len(trucks)} {plural(len(trucks), 'фура', 'фуры', 'фур')} · активных: {active_n}"
         return page("Парк",
                     top("Парк", count, right=add_btn)
@@ -2536,7 +2588,7 @@ def _truck_page(truck_id: str, note: str = "", open_edit: bool = False,
              if truck["driver_phone"] else "—")
     on_trip = db.active_trips(truck_id)
     state, label = _truck_state(truck, on_trip)
-    facts = [("Статус", f'<span class="tstate"><span class="dot s-{state}"></span>{e(label)}</span>'),
+    facts = [("Статус", f'<span class="spill s-{state}">{e(label)}</span>'),
              ("Сейчас" if not on_trip else "Едет в",
               f'<b>{ru(truck["current_city"] or "—")}</b>{src_pill}'),
              ("Водитель", e(truck["driver"] or "—")),
@@ -2736,7 +2788,8 @@ def _ai_offer(match_id: int) -> str:
     if c is None:
         return ""
     price = _price_short(c)
-    price_txt = (f'<span class="money plus">{e(price)}</span>' if price
+    price_txt = (f'<span class="suspect-tag">{e(price)}? проверьте</span>' if price and _suspect(c)
+                 else f'<span class="money plus">{e(price)}</span>' if price
                  else "цена не указана")
     margin = f" · маржа {money(m['margin_usd'])}" if m["margin_usd"] is not None else ""
     d = _details(m)

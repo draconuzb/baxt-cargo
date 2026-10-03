@@ -31,7 +31,9 @@ def fleet(clean_db, truck_tent, truck_ref, monkeypatch):
     ids = []
     for text in ("Груз Ташкент → Москва, 20т тент, 4000$, 22.09",
                  "Груз Ташкент → Казань, 20т тент, 3500$, 22.09",
-                 "Груз Москва → Ташкент, 18т тент, 3800$, 28.09",
+                 # sana nisbiy: qotirilgan "28.09" vaqt o'tib o'tgan sanaga aylangan
+                 "Груз Москва → Ташкент, 18т тент, 3800$, "
+                 + (date.today() + timedelta(days=5)).strftime("%d.%m"),
                  "Груз Ташкент → Алматы, 15т тент, 900$, 22.09"):
         ids += pipeline.handle_message(text, source="grp")
     yield {"ids": ids}

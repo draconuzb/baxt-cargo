@@ -272,3 +272,29 @@ def test_messy_uzbek_ads_parse_without_ai():
     assert (c.kind, c.from_city, c.to_city, c.weight_t) == ("cargo", "Qozon", "Toshkent", 20)
     c = parser.parse("kim Toshkentdan Almatiga ketyapti? 15 tonna qog'oz bor")
     assert (c.from_city, c.to_city, c.weight_t) == ("Toshkent", "Almaty", 15)
+
+
+# ---------------------------------------------------------------- narx xatolari (haqiqiy e'lonlar)
+
+def test_rate_with_cents_is_not_multiplied():
+    """"200000.00 KZT" — tiyin ".00" raqamga qo'shilmaydi (avval 20 mln bo'lardi)."""
+    c = parser.parse("Toshkent viloyati → Shymkent\nVAZNI: 6.00 tonna\nTO'LOV: 200000.00 KZT Naqd")
+    assert (c.rate, c.currency) == (200_000.0, "KZT")
+
+
+def test_full_sum_with_redundant_mln():
+    """"Narxi 1.500.000 mln" — 1,5 mln so'm (avval "500.000 mln" = 500 mln bo'lardi)."""
+    c = parser.parse("Samarqand\nTaxta bozordan\n\nJizzah\nShaharga\n\nNarxi 1.500.000 mln")
+    assert (c.rate, c.currency) == (1_500_000.0, "UZS")
+
+
+def test_route_labels_qayerdan_qayerga():
+    """Shablon e'lon: yorliq yo'nalishni belgilaydi, viloyat — markazi."""
+    c = parser.parse("📍 Qayerdan: 🇷🇺 Tatariston Respublikasi, Rossiya\n"
+                     "🏁 Qayerga: 🇺🇿 Toshkent shahri, O'zbekiston\n💰 4000 USD")
+    assert (c.from_city, c.to_city) == ("Qozon", "Toshkent")
+
+
+def test_route_label_kuda_before_city():
+    c = parser.parse("Куда: Ташкент\nОткуда: Москва\nтент 20т 4500$")
+    assert (c.from_city, c.to_city) == ("Moskva", "Toshkent")

@@ -871,3 +871,24 @@ def test_truck_form_shows_russian_city(client, app_env):
 def test_plural():
     assert [web.plural(n, "фура", "фуры", "фур") for n in (1, 2, 5, 11, 21, 22, 25)] == \
         ["фура", "фуры", "фур", "фур", "фура", "фуры", "фур"]
+
+
+# ---------------------------------------------------------------- dizayn: yorug' rejim, rang
+
+def test_light_theme_is_default(client, app_env):
+    """Buyurtmachi: Telegram tunda panel qop-qora ochilardi. Endi qorong'i — faqat tanlansa."""
+    html = client.get("/").text
+    assert "prefers-color-scheme" not in html
+    assert "localStorage.getItem('baxt-theme')||'light'" in html
+    assert 'class="hero' in html and "BAXT TRANSPORT" in html
+
+
+def test_suspicious_price_is_flagged(client, app_env):
+    import scoring
+    with db.connect() as conn:
+        conn.execute("UPDATE cargos SET rate=20000000, currency='KZT', rate_usd=41667, "
+                     "to_city='Shymkent' WHERE id=?", (app_env["cargo_id"],))
+    row = db.get_cargo(app_env["cargo_id"])
+    assert scoring.rate_suspicious(row)
+    assert "проверьте цену" in client.get(f"/cargo/{app_env['cargo_id']}").text
+    assert "проверьте цену" in web._price_big(row)
