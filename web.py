@@ -97,6 +97,74 @@ def ru(city) -> str:
     return e(geo.ru(city))
 
 
+# Davlat bayroqlari — kichik SVG (emoji belgisi emas, 17-qoida). Soddalashtirilgan:
+# chiziqlar va asosiy belgi; 18 px da tanib olinadi. (rang, y, balandlik) — gorizontal,
+# "v" — vertikal chiziqlar, "c" — doira (rang, cx, cy, r), "x" — xoch.
+_FLAGS = {
+    "UZ": [("#0099b5", 0, 6.5), ("#ce1126", 6.5, .6), ("#fff", 7.1, 5.8), ("#ce1126", 12.9, .6),
+           ("#1eb53a", 13.5, 6.5)],
+    "RU": [("#fff", 0, 6.7), ("#0039a6", 6.7, 6.6), ("#d52b1e", 13.3, 6.7)],
+    "KZ": [("#00afca", 0, 20), ("c", "#fec50c", 15, 9, 4.2)],
+    "KG": [("#e8112d", 0, 20), ("c", "#ffef00", 15, 10, 5)],
+    "TJ": [("#cc0000", 0, 6), ("#fff", 6, 8), ("#006600", 14, 6), ("c", "#f8c300", 15, 10, 1.8)],
+    "TM": [("#00843d", 0, 20), ("v", "#d22630", 5, 5)],
+    "BY": [("#c8313e", 0, 13.3), ("#4aa657", 13.3, 6.7), ("v", "#fff", 0, 2.5)],
+    "TR": [("#e30a17", 0, 20), ("c", "#fff", 12, 10, 5), ("c", "#e30a17", 13.3, 10, 4),
+           ("c", "#fff", 18.5, 10, 1.6)],
+    "CN": [("#de2910", 0, 20), ("c", "#ffde00", 6, 6, 3)],
+    "AZ": [("#00b5e2", 0, 6.7), ("#ef3340", 6.7, 6.6), ("#509e2f", 13.3, 6.7)],
+    "GE": [("#fff", 0, 20), ("x", "#ff0000")],
+    "AM": [("#d90012", 0, 6.7), ("#0033a0", 6.7, 6.6), ("#f2a800", 13.3, 6.7)],
+    "AF": [("v", "#000", 0, 10), ("v", "#d32011", 10, 10), ("v", "#007a36", 20, 10)],
+    "IR": [("#239f40", 0, 6.7), ("#fff", 6.7, 6.6), ("#da0000", 13.3, 6.7)],
+    "PL": [("#fff", 0, 10), ("#dc143c", 10, 10)],
+    "LV": [("#9e3039", 0, 8), ("#fff", 8, 4), ("#9e3039", 12, 8)],
+    "LT": [("#fdb913", 0, 6.7), ("#006a44", 6.7, 6.6), ("#c1272d", 13.3, 6.7)],
+}
+
+
+def flag(country: str | None) -> str:
+    """Davlat bayrog'i (kichik SVG). Noma'lum davlat — bo'sh."""
+    parts = _FLAGS.get(country or "")
+    if not parts:
+        return ""
+    shapes = []
+    for item in parts:
+        if item[0] == "c":
+            _, color, cx, cy, r = item
+            shapes.append(f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{color}"/>')
+        elif item[0] == "v":
+            _, color, x, w = item
+            shapes.append(f'<rect x="{x}" y="0" width="{w}" height="20" fill="{color}"/>')
+        elif item[0] == "x":
+            shapes.append(f'<rect x="13" y="0" width="4" height="20" fill="{item[1]}"/>'
+                          f'<rect x="0" y="8" width="30" height="4" fill="{item[1]}"/>')
+        else:
+            color, y, h = item
+            shapes.append(f'<rect x="0" y="{y}" width="30" height="{h}" fill="{color}"/>')
+    return (f'<span class="flag" title="{country}"><svg viewBox="0 0 30 20" width="18" height="12" '
+            f'aria-hidden="true">{"".join(shapes)}</svg></span>')
+
+
+def _country(city) -> str | None:
+    c = geo.CITIES.get(city or "")
+    return c.country if c else None
+
+
+def route(a, b) -> str:
+    """Yo'nalish bayroqlar bilan: [UZ][RU] Ташкент → Москва (bitta davlat — bitta bayroq)."""
+    ca, cb = _country(a), _country(b)
+    flags = flag(ca) + (flag(cb) if cb != ca else "")
+    lead = f'<span class="flags">{flags}</span>' if flags else ""
+    return f"{lead}{ru(a)} → {ru(b)}"
+
+
+def place(city) -> str:
+    """Shahar bayrog'i bilan."""
+    f = flag(_country(city))
+    return (f'<span class="flags">{f}</span>' if f else "") + ru(city)
+
+
 def plural(n, one: str, few: str, many: str) -> str:
     """Ruscha son bilan kelishik: 1 фура, 2 фуры, 5 фур."""
     n = abs(int(n or 0))
@@ -392,7 +460,9 @@ color-scheme:dark}
 *{box-sizing:border-box}
 html{height:100%;-webkit-text-size-adjust:100%}
 body{margin:0;min-height:100%;color:var(--text);
-background:radial-gradient(1100px 340px at 50% -140px,var(--brand-soft),transparent 70%) no-repeat,var(--bg);
+background:radial-gradient(640px 340px at 0% -60px,rgba(10,132,255,.13),transparent 70%) no-repeat,
+radial-gradient(640px 340px at 100% -40px,rgba(124,58,237,.12),transparent 70%) no-repeat,
+radial-gradient(520px 300px at 50% 105%,rgba(52,199,89,.06),transparent 70%) no-repeat fixed,var(--bg);
 font:16px/1.47 -apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",
 "Segoe UI",Roboto,system-ui,sans-serif;letter-spacing:-.01em;
 -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
@@ -471,7 +541,8 @@ transition:transform .1s,filter .15s,background .15s;white-space:nowrap;
 -webkit-tap-highlight-color:transparent}
 .btn:active{transform:scale(.96);filter:brightness(.96)}
 .btn.primary{background:var(--brand);color:var(--on-brand)}
-.btn.ok{background:var(--ok);color:#fff}
+.btn.ok{background:linear-gradient(135deg,#34c759,#1fae4b);color:#fff;
+box-shadow:0 4px 12px rgba(52,199,89,.32)}
 .btn.ghost{background:transparent;color:var(--brand);padding:8px 10px}
 .btn.ghost:active{background:var(--surface-3)}
 .btn.danger{background:var(--bad-bg);color:var(--bad)}
@@ -594,6 +665,42 @@ padding:2px 9px 2px 8px;border-radius:999px;white-space:nowrap;vertical-align:1p
 .deal .pd.suspect{color:var(--warn-text);font-size:18px}
 .deal .pd.suspect small{font-size:12px;font-weight:600;display:block;text-align:right}
 .suspect-tag{color:var(--warn-text);font-weight:600}
+/* bo'lim sarlavhasi — rangli gradient */
+.phead{position:relative;overflow:hidden;border-radius:24px;padding:16px 14px 16px 18px;
+margin:2px 0 16px;color:#fff;display:flex;align-items:center;gap:10px;
+box-shadow:0 12px 28px var(--ph-shadow,rgba(0,0,0,.15))}
+.phead:before{content:"";position:absolute;right:-60px;top:-90px;width:230px;height:230px;
+border-radius:50%;background:radial-gradient(rgba(255,255,255,.28),transparent 68%)}
+.phead>*{position:relative}
+.phead .ph-text{flex:1;min-width:0}
+.phead h1{color:#fff;font-size:30px;font-weight:800;letter-spacing:-.03em;margin:0;line-height:1.1}
+.phead .ph-sub{opacity:.9;font-size:14.5px;margin-top:4px;line-height:1.35}
+.phead .ph-right{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+.phead .ph-right .btn{background:rgba(255,255,255,.22);color:#fff;box-shadow:none}
+.phead .ph-art{flex:none;filter:drop-shadow(0 8px 12px rgba(0,0,0,.22));transform:rotate(-6deg)}
+.tone-cargo{background:linear-gradient(135deg,#ea580c 0%,#db2777 100%);--ph-shadow:rgba(219,39,119,.28)}
+.tone-park{background:linear-gradient(135deg,#059669 0%,#0e7490 100%);--ph-shadow:rgba(14,116,144,.28)}
+.tone-trips{background:linear-gradient(135deg,#0d9488 0%,#2563eb 100%);--ph-shadow:rgba(37,99,235,.26)}
+.tone-ai{background:linear-gradient(135deg,#4f46e5 0%,#9333ea 100%);--ph-shadow:rgba(147,51,234,.28)}
+.tone-more{background:linear-gradient(135deg,#334155 0%,#2563eb 100%);--ph-shadow:rgba(37,99,235,.24)}
+/* bayroqlar */
+.flags{display:inline-flex;gap:3px;margin-right:7px;vertical-align:1px}
+.flag{position:relative;display:inline-block;width:18px;height:12px;border-radius:3px;overflow:hidden;
+line-height:0;flex:none}
+.flag:after{content:"";position:absolute;inset:0;border-radius:3px;box-shadow:inset 0 0 0 .5px rgba(0,0,0,.2)}
+.flag svg{display:block}
+/* fura raqami — holat rangi */
+.tnum.st-free{background:linear-gradient(135deg,#34c759,#0d9488);color:#fff}
+.tnum.st-trip{background:linear-gradient(135deg,#0a84ff,#5e5ce6);color:#fff}
+.tnum.st-later{background:linear-gradient(135deg,#ff9f0a,#f97316);color:#fff}
+.tnum.st-off{background:var(--surface-3);color:var(--muted)}
+/* taklif tafsiloti — rangli chiplar */
+.chips-s{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.mc{display:inline-flex;align-items:center;font-size:12.5px;font-weight:600;padding:3px 9px;
+border-radius:999px;background:var(--surface-2);color:var(--muted);white-space:nowrap}
+.mc.good{background:var(--ok-bg);color:var(--ok-text)}
+.mc.warn{background:var(--warn-bg);color:var(--warn-text)}
+.mc.bad{background:var(--bad-bg);color:var(--bad)}
 /* boshqa fura tanlash */
 .alts:empty{display:none}
 .offer .alts{flex-basis:100%}
@@ -791,6 +898,9 @@ backdrop-filter:blur(22px) saturate(180%);border-top:.5px solid var(--nav-brd)}
 padding:3px 0;color:var(--muted);font-size:10.5px;font-weight:600;
 -webkit-tap-highlight-color:transparent}
 .tabbar a.on{color:var(--brand)}
+.tabbar .ti{display:grid;place-items:center;width:54px;height:30px;border-radius:999px;
+transition:background .2s}
+.tabbar a.on .ti{background:var(--brand-soft)}
 .tabbar a:active{opacity:.6}
 .tabbar .orb{width:56px;height:56px;margin-top:-30px;border-radius:50%;display:grid;
 place-items:center;color:#fff;background:linear-gradient(140deg,#0a84ff,#5e5ce6);
@@ -993,7 +1103,7 @@ def page(title: str, body: str, active: str = "", head: str = "",
             tabs.append(f'<a href="{href}" class="ai{on}"><span class="orb">{anim("sparkles", 30)}</span>'
                         f'<span>{label}</span></a>')
         else:
-            tabs.append(f'<a href="{href}" class="{on.strip()}">{ic(icon, 24)}'
+            tabs.append(f'<a href="{href}" class="{on.strip()}"><span class="ti">{ic(icon, 24)}</span>'
                         f'<span>{label}</span></a>')
     tabbar = f'<nav class="tabbar">{"".join(tabs)}</nav>' if nav else ""
     layout = "" if nav else "<style>body{grid-template-columns:1fr}</style>"
@@ -1009,9 +1119,24 @@ def page(title: str, body: str, active: str = "", head: str = "",
     return HTMLResponse(html, status_code=status_code)
 
 
+# Asosiy bo'limlar sarlavhasi — har birining o'z rangi (buyurtmachi: "oddiy bo'lib
+# qolgan, jonlantiring"). (gradient sinfi, jonli emoji)
+TONES = {"cargo": "box", "park": "truck", "trips": "flag", "ai": "robot", "more": "sparkles"}
+
+
 def top(title: str, subtitle: str = "", back: tuple[str, str] | None = None,
-        right: str = "") -> str:
-    """Sahifa sarlavhasi (iOS "large title"). `back` — ichki sahifadan qaytish."""
+        right: str = "", tone: str | None = None) -> str:
+    """Sahifa sarlavhasi (iOS "large title"). `back` — ichki sahifadan qaytish.
+
+    `tone` berilsa — rangli gradient sarlavha (asosiy tablar uchun)."""
+    if tone:
+        back_html = (f'<a class="back" href="{back[0]}">{ic("back", 20)}{e(back[1])}</a>'
+                     if back else "")
+        sub = f'<div class="ph-sub">{subtitle}</div>' if subtitle else ""
+        right_html = f'<div class="ph-right">{right}</div>' if right else ""
+        return (f'{back_html}<section class="phead tone-{tone} fade"><div class="ph-text">'
+                f'<h1>{title}</h1>{sub}{right_html}</div>'
+                f'<span class="ph-art">{anim(TONES.get(tone, "sparkles"), 58)}</span></section>')
     back_html = (f'<a class="back" href="{back[0]}">{ic("back", 20)}{e(back[1])}</a>'
                  if back else "")
     sub = f'<div class="sub">{subtitle}</div>' if subtitle else ""
@@ -1139,7 +1264,7 @@ def _taken_card(res, driver_ok: bool) -> str:
     return f"""<div class="deal taken" id="m{mid}">
   <div class="row1"><b>{anim("party", 22)} Груз взят — фура №{e(truck_id)}</b>
   <span class="pill info">В пути</span></div>
-  <div class="meta">#{c['id']} {ru(c['from_city'])} → {ru(c['to_city'])} ·
+  <div class="meta">#{c['id']} {route(c['from_city'], c['to_city'])} ·
   погрузка {e(_day_text(c.get('load_date')))} · освободится <b>{e(_day_text(res.free_date))}</b></div>
   <div class="meta">{e(driver)}</div>
   <div class="acts"><form method="post" action="/trip/{mid}/undo" class="inline"
@@ -1253,7 +1378,7 @@ def _deal(match_id, cargo_id, route_from, route_to, per_day, meta: str,
     `id="m.."` — HTMX "Olaman/O'tkazish" javobi shu blokni almashtiradi.
     """
     return f"""<div class="deal" id="m{match_id}">
-  <div class="row1"><a class="route" href="/cargo/{cargo_id}">{ru(route_from)} → {ru(route_to)}</a>
+  <div class="row1"><a class="route" href="/cargo/{cargo_id}">{route(route_from, route_to)}</a>
   {right if right is not None else _per_day(per_day)}</div>
   <div class="meta">{meta}</div>
   {f'<div class="acts">{actions}</div>' if actions else ''}
@@ -1264,13 +1389,19 @@ def _deal(match_id, cargo_id, route_from, route_to, per_day, meta: str,
 def _offer(row) -> str:
     """Taklif: o'ngda yuk NARXI (yashil); pastda marja, bo'sh probeg, sana, kunlar."""
     d = _details(row)
-    when = e(_day_text(row["load_date"]))
-    empty = f"пустой {row['empty_km']:.0f} км"
-    days = d.get("trip_days", "—")
+    chips = []
     if row["margin_usd"] is None:
-        meta = f"цена не указана · {empty} · {when} · {days} дн."
+        chips.append('<span class="mc warn">цена не указана</span>')
     else:
-        meta = f"маржа {money(row['margin_usd'])} · {empty} · {when} · {days} дн."
+        good = "good" if row["margin_usd"] > 0 else "bad"
+        chips.append(f'<span class="mc {good}">маржа {money(row["margin_usd"])}</span>')
+    km = row["empty_km"] or 0
+    chips.append('<span class="mc good">без порожняка</span>' if km < 30 else
+                 f'<span class="mc">пустой {km:.0f} км</span>')
+    chips.append(f'<span class="mc">{e(_day_text(row["load_date"]))}</span>')
+    if d.get("trip_days"):
+        chips.append(f'<span class="mc">{d["trip_days"]} дн.</span>')
+    meta = f'<span class="chips-s">{"".join(chips)}</span>'
     return _deal(row["id"], row["cargo_id"], row["from_city"], row["to_city"],
                  None, meta, _decision_buttons(row["id"]), right=_price_big(row))
 
@@ -1326,7 +1457,7 @@ def _trip_block(trip, show_truck: bool = False) -> str:
             f'фура вернётся на прежнее место.\')">'
             f'<button class="btn sm">{ic("refresh", 15)} Отменить</button></form>')
     return f"""<div class="trip">
-  <div class="row1"><span>{truck}<a class="route" href="/cargo/{trip['cargo_id']}">{ru(trip['from_city'])} → {ru(trip['to_city'])}</a></span>
+  <div class="row1"><span>{truck}<a class="route" href="/cargo/{trip['cargo_id']}">{route(trip['from_city'], trip['to_city'])}</a></span>
   <span class="pill info">В пути</span></div>
   <div class="meta">груз #{trip['cargo_id']} · погрузка {e(_day_text(trip['load_date']))} ·
   освободится <b>{e(_day_text(free))}</b> · прогноз {money(trip['margin_usd'])}{actual}</div>
@@ -1343,9 +1474,9 @@ def _truck_card(t, offers, trips=()) -> str:
         temp = f" {t['temp_min']:g}…{t['temp_max']:g}°"
     state, label = _truck_state(t, trips)
     where = t["current_city"] or "—"
-    title = f"{ru(trips[-1]['from_city'])} → {ru(where)}" if trips else ru(where)
+    title = route(trips[-1]['from_city'], where) if trips else place(where)
     snow = anim("snow", 16) if t["body_type"] == "ref" else ""
-    header = f"""<a class="li" href="/truck/{e(t['id'])}"><span class="tnum big">№{e(t['id'])}</span>
+    header = f"""<a class="li" href="/truck/{e(t['id'])}"><span class="tnum big st-{state}">№{e(t['id'])}</span>
   <div class="main"><span class="t">{title}</span>
   <div class="s"><span class="spill s-{state}">{e(label)}</span>
   {snow}{e(body)}{e(temp)} · {t['capacity_t'] or 0:g} т</div></div>
@@ -1371,9 +1502,9 @@ def _truck_row(t, trips=()) -> str:
     body = BODY.get(t["body_type"], t["body_type"] or "—")
     state, label = _truck_state(t, trips)
     where = t["current_city"] or "—"
-    title = f"{ru(trips[-1]['from_city'])} → {ru(where)}" if trips else ru(where)
+    title = route(trips[-1]['from_city'], where) if trips else place(where)
     driver = f" · {e(t['driver'])}" if t["driver"] else ""
-    return f"""<a class="li" href="/truck/{e(t['id'])}"><span class="tnum big">№{e(t['id'])}</span>
+    return f"""<a class="li" href="/truck/{e(t['id'])}"><span class="tnum big st-{state}">№{e(t['id'])}</span>
   <div class="main"><span class="t">{title}</span>
   <div class="s"><span class="spill s-{state}">{e(label)}</span>
   {e(body)} {t['capacity_t'] or 0:g} т{driver}</div></div>
@@ -1586,7 +1717,7 @@ def create_app() -> FastAPI:
         if not _is_htmx(request):
             return _redirect(url)
         toast = _toast(f'{anim("party", 20)} Фура №{e(truck_id)} взяла: '
-                       f'{ru(res.cargo["from_city"])} → {ru(res.cargo["to_city"])}')
+                       f'{route(res.cargo["from_city"], res.cargo["to_city"])}')
         path = urlparse(request.headers.get("hx-current-url", "")).path
         if path == "/":
             # Bosh sahifa: butun park yangilanadi — fura "Yo'lda" bo'lib ko'rinadi
@@ -1659,7 +1790,8 @@ def create_app() -> FastAPI:
 </form>{_city_datalist()}
 <div class="chips scroll" style="margin:0 0 18px">{chips}</div>"""
 
-        body = (top("Грузы", "Поиск по нашему парку: какая фура возьмёт и сколько заработает")
+        body = (top("Грузы", "Поиск по нашему парку: какая фура возьмёт и сколько заработает",
+                    tone="cargo")
                 + _cargo_tabs("/search"))
         if not text:
             return page("Поиск", body + notes + form + _watch_block(), active="/search")
@@ -1747,7 +1879,7 @@ def create_app() -> FastAPI:
         items = []
         for r in rows:
             items.append(f"""<div class="li">{_ring(r['best_score'], small=True)}
-  <div class="main"><a class="t route" href="/cargo/{r['id']}">{ru(r['from_city'])} → {ru(r['to_city'])}</a>
+  <div class="main"><a class="t route" href="/cargo/{r['id']}">{route(r['from_city'], r['to_city'])}</a>
     <div class="s">{_cargo_line(r)} · {_rate_text(r)} · {e(_day_text(r['load_date']))}</div>
     <div class="s">{e(r['source'] or '')} · {e(ago_phrase(r['created_at']))}</div>
     <div class="s clamp">{e(r['raw_text'])}</div></div>
@@ -1757,7 +1889,7 @@ def create_app() -> FastAPI:
                           "или выберите статус «все».", "search"))
         return page("Грузы",
                     top("Грузы", f"{len(rows)} {plural(len(rows), 'груз', 'груза', 'грузов')}"
-                                 f" · собираются из групп автоматически")
+                                 f" · собираются из групп автоматически", tone="cargo")
                     + _cargo_tabs("/cargos")
                     + "".join(notes) + filters + listing, active="/cargos")
 
@@ -1792,7 +1924,7 @@ def create_app() -> FastAPI:
 
         info = f"""<a class="back" href="/cargos">{ic("back", 20)}Грузы</a><div class="card">
   <header>
-    <div><h1 style="margin:0">{ru(c['from_city'])} → {ru(c['to_city'])}</h1>
+    <div><h1 style="margin:0">{route(c['from_city'], c['to_city'])}</h1>
       <div class="sub" style="margin:2px 0 0">Груз #{c['id']} ·
         {e(ago_phrase(c['created_at']))} · {e(c['source'] or '?')}</div>{via}</div>
     {_status_pill(c['status'])}
@@ -1841,7 +1973,7 @@ def create_app() -> FastAPI:
         add_btn = f'<a class="btn sm tint" href="/trucks/new">{ic("plus", 15)} Фура</a>'
         count = f"{len(trucks)} {plural(len(trucks), 'фура', 'фуры', 'фур')} · активных: {active_n}"
         return page("Парк",
-                    top("Парк", count, right=add_btn)
+                    top("Парк", count, right=add_btn, tone="park")
                     + _park_tabs("/trucks") + listing
                     + '<p class="muted" style="margin:12px 4px">Нажмите на фуру — местоположение, '
                       'предложения, история и редактирование.</p>', active="/trucks")
@@ -1941,7 +2073,7 @@ def create_app() -> FastAPI:
   <span><i style="background:#ca8a04"></i>65–84</span>
   <span><i style="background:#9ca3af"></i>низкий</span>
 </div>"""
-        body = (top("Грузы", "Карта: фуры и активные грузы за последние 24 часа")
+        body = (top("Грузы", "Карта: фуры и активные грузы за последние 24 часа", tone="cargo")
                 + _cargo_tabs("/map") + legend + '<div id="map"></div>' + MAP_JS)
         return page("Карта", body, active="/map", head=libs)
 
@@ -1990,7 +2122,7 @@ def create_app() -> FastAPI:
             per_km = f"{r['rate_per_km']:.2f} $/км" if r["rate_per_km"] else few
             km = f"{r['km']:.0f} км" if r["km"] else "—"
             route_rows.append(f"""<tr>
-  <td><b>{ru(r['from_city'])} → {ru(r['to_city'])}</b></td>
+  <td><b>{route(r['from_city'], r['to_city'])}</b></td>
   <td class="num">{r['count']}</td>
   <td class="num">{km}</td>
   <td class="r">{money(r['avg_rate_usd'])}</td>
@@ -2065,14 +2197,14 @@ def create_app() -> FastAPI:
                 result = f'<span class="money">{money(actual_v)}</span>{pct}'
             rows.append(f"""<div class="li">
   <span class="tnum">№{e(r['truck_id'])}</span>
-  <div class="main"><a class="t route" href="/cargo/{r['cargo_id']}">{ru(r['from_city'])} → {ru(r['to_city'])}</a>
+  <div class="main"><a class="t route" href="/cargo/{r['cargo_id']}">{route(r['from_city'], r['to_city'])}</a>
   <div class="s">завершён {e((r['finished_at'] or '')[:10])} · прогноз {money(r['margin_usd'])}</div></div>
   <span class="end">{result}</span></div>""")
         done_html = (f'<div class="list">{"".join(rows)}</div>' if rows else
                      _empty("Взятых рейсов пока нет. Они появятся здесь после "
                             "нажатия «Беру» на карточке.", "receipt"))
         return page("Рейсы",
-                    top("Рейсы", "В пути и завершённые")
+                    top("Рейсы", "В пути и завершённые", tone="trips")
                     + _park_tabs("/history") + notes
                     + f'<h2 class="sec"><span>{anim("truck", 22)} В пути</span> <small>{len(active_trips)}</small></h2>'
                     + road_html
@@ -2155,7 +2287,8 @@ def create_app() -> FastAPI:
         new_btn = (f'<form method="post" action="/chat/new" class="inline">'
                    f'<button class="btn sm" title="Начать разговор заново">'
                    f'{ic("refresh", 14)} Новый</button></form>')
-        body = f"""{top(f"AI-помощник{anim('robot', 34)}", "Пишите обычными словами", right=new_btn)}{note}
+        body = f"""{top("AI-помощник", "Пишите обычными словами — найду груз, составлю план",
+                        right=new_btn, tone="ai")}{note}
 <div class="chat" id="thread">{history}</div>
 <div class="bubble ai typing" id="typing"><i></i><i></i><i></i></div>
 <div class="dock"><div class="chips scroll">{chips}</div>
@@ -2206,7 +2339,7 @@ def create_app() -> FastAPI:
                     f'<span class="end">{badge}{ic("chevron", 16, "chev")}</span></a>')
 
         groups = [("Анализ", MORE[:1]), ("AI и отслеживание", MORE[1:3]), ("Система", MORE[3:])]
-        body = top("Ещё")
+        body = top("Ещё", "Статистика, правила, настройки", tone="more")
         for title, items in groups:
             extra = ""
             if title == "Система":
@@ -2385,7 +2518,7 @@ def _return_block(cargo, matches) -> str:
         back = db.get_cargo(r["cargo_id"])
         lines.append(f"""<tr>
   <td>{_ring(r['score'], small=True)}</td>
-  <td><a class="route" href="/cargo/{back['id']}">{ru(back['from_city'])} → {ru(back['to_city'])}</a></td>
+  <td><a class="route" href="/cargo/{back['id']}">{route(back['from_city'], back['to_city'])}</a></td>
   <td class="num">{r['empty_km']} км</td>
   <td class="r"><span class="money plus">{money(r['margin_usd'])}</span></td>
   <td class="r">{e(_price_short(back) or '—')}</td>
@@ -2590,7 +2723,7 @@ def _truck_page(truck_id: str, note: str = "", open_edit: bool = False,
     state, label = _truck_state(truck, on_trip)
     facts = [("Статус", f'<span class="spill s-{state}">{e(label)}</span>'),
              ("Сейчас" if not on_trip else "Едет в",
-              f'<b>{ru(truck["current_city"] or "—")}</b>{src_pill}'),
+              f'<b>{place(truck["current_city"] or "—")}</b>{src_pill}'),
              ("Водитель", e(truck["driver"] or "—")),
              ("Телефон", phone),
              ("Telegram", "подключён — рейсы приходят сами" if truck["tg_user_id"] else
@@ -2599,7 +2732,7 @@ def _truck_page(truck_id: str, note: str = "", open_edit: bool = False,
                "не подключён · сначала укажите госномер")),
              ("GPS", gps_txt),
              ("Топливо", f'{truck["fuel_l_100km"] or 0:g} л/100 км'),
-             ("Направление", e(truck["preferred_dir"] or "—"))]
+             ("Направление", flag(truck["preferred_dir"]) + " " + e(truck["preferred_dir"] or "—"))]
     facts_html = '<div class="list kv">' + "".join(
         f'<div class="li"><span class="k">{k}</span><span class="v">{v}</span></div>'
         for k, v in facts) + "</div>"
@@ -2607,7 +2740,7 @@ def _truck_page(truck_id: str, note: str = "", open_edit: bool = False,
     offers = _truck_offers(truck_id)
 
     trips = "".join(f"""<a class="li" href="/cargo/{r['cargo_id']}">
-  <div class="main"><span class="t">{ru(r['from_city'])} → {ru(r['to_city'])}</span>
+  <div class="main"><span class="t">{route(r['from_city'], r['to_city'])}</span>
   <div class="s">{e((r['decided_at'] or r['created_at'] or '')[:10])} · прогноз {money(r['margin_usd'])}
   · факт {money(r['actual_margin_usd']) if r['actual_margin_usd'] is not None else '—'}</div></div>
   <span class="end">{ic("chevron", 16, "chev")}</span></a>""" for r in db.truck_history(truck_id))
@@ -2616,7 +2749,7 @@ def _truck_page(truck_id: str, note: str = "", open_edit: bool = False,
     html = (top(f"Фура №{e(truck_id)}",
                 " · ".join(x for x in (e(truck["plate"] or ""),
                                        f"{e(body)} {truck['capacity_t'] or 0:g} т") if x),
-                back=("/trucks", "Парк"), right=plan_btn)
+                back=("/trucks", "Парк"), right=plan_btn, tone="park")
             + note + facts_html
             + ('<h2 class="sec">Текущий рейс</h2><div class="card tcard">'
                + "".join(_trip_block(t) for t in on_trip) + '</div>' if on_trip else '')
@@ -2800,7 +2933,7 @@ def _ai_offer(match_id: int) -> str:
         f"{d['trip_days']} дн." if d.get("trip_days") else "",
         _day_text(c["load_date"]) if c["load_date"] else "") if x)
     return f"""<div class="offer" id="m{match_id}">
-  <div class="grow"><a class="route" href="/cargo/{c['id']}">#{c['id']} {ru(c['from_city'])} → {ru(c['to_city'])}</a>
+  <div class="grow"><a class="route" href="/cargo/{c['id']}">#{c['id']} {route(c['from_city'], c['to_city'])}</a>
   <div class="muted">{price_txt} · №{e(m['truck_id'])}{margin}</div>
   <div class="muted">{e(facts)}</div></div>
   <div class="act">{_decision_buttons(match_id)}</div>

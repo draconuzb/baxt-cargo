@@ -892,3 +892,23 @@ def test_suspicious_price_is_flagged(client, app_env):
     assert scoring.rate_suspicious(row)
     assert "проверьте цену" in client.get(f"/cargo/{app_env['cargo_id']}").text
     assert "проверьте цену" in web._price_big(row)
+
+
+def test_every_country_has_flag():
+    """Har bir shaharning davlati uchun bayroq bor (yo'nalish oldida chiqadi)."""
+    import geo
+    missing = {c.country for c in geo.CITIES.values()} - set(web._FLAGS)
+    assert missing == set()
+
+
+def test_route_has_flags_and_plain_text():
+    html = web.route("Toshkent", "Moskva")
+    assert html.count('class="flag"') == 2 and "Ташкент → Москва" in html
+    assert web.route("Toshkent", "Samarqand").count('class="flag"') == 1   # bitta davlat
+
+
+def test_main_tabs_have_colored_headers(client, app_env):
+    """Buyurtmachi: "oddiy bo'lib qolgan" — asosiy bo'limlar rangli sarlavha bilan."""
+    for url, tone in (("/cargos", "cargo"), ("/trucks", "park"), ("/chat", "ai"),
+                      ("/more", "more"), ("/history", "trips")):
+        assert f'class="phead tone-{tone}' in client.get(url).text, url

@@ -188,3 +188,8 @@ Har qanday o'zgartirishdan keyin `python main.py demo` va `pytest` ishlashi shar
 32. **Mavzu doim yorug'** (buyurtmachi: Telegram tunda panel qop-qora ochilardi).
     Qorong'i — faqat "Ещё → тема" tanlansa (`data-theme="dark"`, grafit, qora
     emas). `prefers-color-scheme` ishlatilmaydi (`test_light_theme_is_default`).
+    Buyurtmachi: dizayn "oddiy bo'lib qolmasin" — asosiy bo'lim sarlavhasi rangli
+    gradient (`top(..., tone="cargo|park|trips|ai|more")`, bosh sahifada `hero`),
+    yo'nalish oldida bayroq (`web.route(a, b)`, `web.place(city)`, SVG `_FLAGS`;
+    yangi davlat qo'shilsa bayrog'i ham — `test_every_country_has_flag`), fura
+    raqami holat rangida (`st-free/trip/later`), taklif tafsiloti chiplarda (`.mc`).
