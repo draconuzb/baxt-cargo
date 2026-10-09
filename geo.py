@@ -417,6 +417,7 @@ def _case_variants(t: str) -> list[str]:
     return out
 
 
+@functools.lru_cache(maxsize=200_000)
 def lookup(token: str, threshold: float = 0.87) -> str | None:
     """Bitta so'z/ibora bo'yicha shaharni topadi (aniq, keyin taxminiy)."""
     return _lookup(_norm(token), threshold)

@@ -338,6 +338,16 @@ def recent_cargos(hours: int = 48) -> list[sqlite3.Row]:
         ).fetchall()
 
 
+def recent_route_cargos(from_city: str | None, to_city: str | None,
+                        hours: float = 36) -> list[sqlite3.Row]:
+    """Dubl tekshiruvi uchun: shu yo'nalishdagi oynadagi yuklar (idx_cargo_route)."""
+    with connect() as conn:
+        return conn.execute(
+            f"SELECT id, fingerprint, phone, load_date, raw_text FROM cargos"
+            f" WHERE from_city = ? AND to_city = ? AND {_SEEN} >= ? ORDER BY id DESC",
+            (from_city, to_city, _ago(hours=hours))).fetchall()
+
+
 def active_cargos(hours: int = 24) -> list[sqlite3.Row]:
     since = _ago(hours=hours)
     with connect() as conn:

@@ -63,9 +63,14 @@ def _same_day(cargo_date, row_date: str | None) -> bool:
 
 
 def is_duplicate(c, window_hours: int = 36, sim_threshold: float = 0.90) -> tuple[bool, int | None]:
-    """(dubl_mi, mavjud_yuk_id) qaytaradi."""
+    """(dubl_mi, mavjud_yuk_id) qaytaradi.
+
+    Faqat shu yo'nalishdagi yozuvlar o'qiladi (indeks bo'yicha). Ilgari har
+    yuk uchun oynadagi HAMMA e'lon matni bilan o'qilardi — guruhlardan kuniga
+    100 mingdan ortiq xabarda vaqtning 70% shu yerda ketardi (2026-10-09).
+    """
     fp = fingerprint(c)
-    rows = db.recent_cargos(hours=window_hours)
+    rows = db.recent_route_cargos(c.from_city, c.to_city, hours=window_hours)
 
     for r in rows:
         if r["fingerprint"] == fp:
@@ -74,17 +79,13 @@ def is_duplicate(c, window_hours: int = 36, sim_threshold: float = 0.90) -> tupl
     # bir xil telefon + bir xil yo'nalish + bir xil kun
     if c.phone:
         for r in rows:
-            if r["phone"] == c.phone and r["from_city"] == c.from_city \
-                    and r["to_city"] == c.to_city \
-                    and _same_day(c.load_date, r["load_date"]):
+            if r["phone"] == c.phone and _same_day(c.load_date, r["load_date"]):
                 return True, r["id"]
 
     # forward qilingan / ozgina o'zgartirilgan matn
     mine = _clean(c.raw_text)
     if len(mine) > 40:
         for r in rows:
-            if r["from_city"] != c.from_city or r["to_city"] != c.to_city:
-                continue
             if not _same_day(c.load_date, r["load_date"]):
                 continue
             if _sim(mine, _clean(r["raw_text"] or "")) >= sim_threshold:
