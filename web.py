@@ -970,7 +970,11 @@ td,th{padding:11px 12px}
 .filters input,.filters select{width:100%}
 }
 .filters label.check{display:flex;gap:8px;align-items:center;color:var(--text);margin:24px 0 0;cursor:pointer}
-.filters label.check input{width:auto;margin:0}
+.filters label.check input{width:22px;height:22px;margin:0;padding:0;border-radius:6px;flex:none;
+display:grid;place-content:center;cursor:pointer}
+.filters label.check input:checked{background:var(--brand);border-color:var(--brand)}
+.filters label.check input:checked::after{content:"";width:6px;height:11px;margin-top:-3px;
+border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
 """
 
 # ---------------------------------------------------------------- ikonkalar
@@ -2617,9 +2621,11 @@ def _groups_block() -> str:
         else:
             detail = "за 7 дней грузов не было"
         if flow and r["status"] == "active":
-            detail += (f'<br>Сегодня: {_num(flow["messages"])} сообщ. → '
-                       f'<b>{_num(flow["saved"])} новых грузов</b> · '
-                       f'{_num(flow["dup"])} повторов · {_num(flow["skipped"])} не груз')
+            saved, dup = flow["saved"], flow["dup"]
+            detail += (f'<br>Сегодня: {_num(flow["messages"])} сообщ. → <b>{_num(saved)} '
+                       f'{plural(saved, "новый груз", "новых груза", "новых грузов")}</b> · '
+                       f'{_num(dup)} {plural(dup, "повтор", "повтора", "повторов")} · '
+                       f'{_num(flow["skipped"])} не груз')
         retry = (f'<form method="post" action="/groups/{r["id"]}/retry" class="inline">'
                  f'<button class="btn sm tint" title="Повторить">{ic("refresh", 15)}</button></form>'
                  if r["status"] == "error" else "")

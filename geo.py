@@ -159,7 +159,7 @@ _RAW = [
     ("Xayraton", 37.2333, 67.4167, "AF", "хайратан|hairatan|xayraton|hayraton"),
     ("Lotfabad", 37.5167, 59.3500, "IR", "лотфабад|лотфабод|lotfabad|lotfobod"),
     ("Saraxs", 36.5449, 61.1577, "IR", "серахс|сарахс|sarakhs|saraxs|seraxs"),
-    ("Alashankou", 45.1700, 82.5700, "CN", "алашанькоу|alashankou|alashankov"),
+    ("Alashankou", 45.1700, 82.5700, "CN", "алашанькоу|алашанкоу|алашонко|алашанько|alashankou|alashankov|alashonko|alashanko"),
     ("Xorgos", 44.2150, 80.4100, "KZ", "хоргос|horgos|khorgos|xorgos|qorgos"),
     ("Dostyk", 45.2500, 82.4800, "KZ", "достык|dostyk|druzhba kpp"),
     ("Irkeshtam", 39.6800, 73.9000, "KG", "иркештам|irkeshtam|irkishtom"),
