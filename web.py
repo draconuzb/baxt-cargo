@@ -120,6 +120,25 @@ _FLAGS = {
     "PL": [("#fff", 0, 10), ("#dc143c", 10, 10)],
     "LV": [("#9e3039", 0, 8), ("#fff", 8, 4), ("#9e3039", 12, 8)],
     "LT": [("#fdb913", 0, 6.7), ("#006a44", 6.7, 6.6), ("#c1272d", 13.3, 6.7)],
+    "UA": [("#0057b7", 0, 10), ("#ffd700", 10, 10)],
+    "MD": [("v", "#0046ae", 0, 10), ("v", "#ffd200", 10, 10), ("v", "#cc092f", 20, 10)],
+    "MN": [("v", "#c4272f", 0, 10), ("v", "#015197", 10, 10), ("v", "#c4272f", 20, 10)],
+    "DE": [("#000", 0, 6.7), ("#dd0000", 6.7, 6.6), ("#ffce00", 13.3, 6.7)],
+    "NL": [("#ae1c28", 0, 6.7), ("#fff", 6.7, 6.6), ("#21468b", 13.3, 6.7)],
+    "BE": [("v", "#000", 0, 10), ("v", "#fdda24", 10, 10), ("v", "#ef3340", 20, 10)],
+    "FR": [("v", "#0055a4", 0, 10), ("v", "#fff", 10, 10), ("v", "#ef4135", 20, 10)],
+    "IT": [("v", "#009246", 0, 10), ("v", "#fff", 10, 10), ("v", "#ce2b37", 20, 10)],
+    "ES": [("#aa151b", 0, 5), ("#f1bf00", 5, 10), ("#aa151b", 15, 5)],
+    "CZ": [("#fff", 0, 10), ("#d7141a", 10, 10), ("v", "#11457e", 0, 10)],
+    "SK": [("#fff", 0, 6.7), ("#0b4ea2", 6.7, 6.6), ("#ee1c25", 13.3, 6.7)],
+    "HU": [("#ce2939", 0, 6.7), ("#fff", 6.7, 6.6), ("#477050", 13.3, 6.7)],
+    "RO": [("v", "#002b7f", 0, 10), ("v", "#fcd116", 10, 10), ("v", "#ce1126", 20, 10)],
+    "BG": [("#fff", 0, 6.7), ("#00966e", 6.7, 6.6), ("#d62612", 13.3, 6.7)],
+    "AT": [("#ed2939", 0, 6.7), ("#fff", 6.7, 6.6), ("#ed2939", 13.3, 6.7)],
+    "DK": [("#c8102e", 0, 20), ("x", "#fff")],
+    "SE": [("#006aa7", 0, 20), ("x", "#fecc00")],
+    "FI": [("#fff", 0, 20), ("x", "#002f6c")],
+    "EE": [("#0072ce", 0, 6.7), ("#000", 6.7, 6.6), ("#fff", 13.3, 6.7)],
 }
 
 
@@ -950,6 +969,8 @@ td,th{padding:11px 12px}
 .filters>div{flex:1 1 140px}
 .filters input,.filters select{width:100%}
 }
+.filters label.check{display:flex;gap:8px;align-items:center;color:var(--text);margin:24px 0 0;cursor:pointer}
+.filters label.check input{width:auto;margin:0}
 """
 
 # ---------------------------------------------------------------- ikonkalar
@@ -1809,8 +1830,8 @@ def create_app() -> FastAPI:
         form = await _form(request)
         text = (form.get("q") or "").strip()
         query = search_mod.parse_query(text)
-        if query.is_empty:
-            return _redirect("/search")
+        if not (query.from_city or query.to_city):
+            return _redirect("/search")          # kuzatuv faqat shahar bo'yicha
         for w in db.active_watches():
             if (w["from_city"], w["to_city"], w["body_type"]) == \
                     (query.from_city, query.to_city, query.body_type):
@@ -1831,17 +1852,25 @@ def create_app() -> FastAPI:
         q = request.query_params
         notes = []
 
-        def city(param: str) -> str | None:
+        try:
+            radius = max(0, min(int(q.get("r", "50") or 0), 500))
+        except ValueError:
+            radius = 50
+
+        def place(param: str) -> set[str] | None:
+            """Shahar (atrofi bilan) yoki davlat -> shaharlar to'plami."""
             raw = (q.get(param) or "").strip()
             if not raw:
                 return None
-            found = geo.lookup(raw)
-            if not found:
-                notes.append(_note("err", f"Город «{e(raw)}» не найден"))
-                return raw           # kanonik emas — hech narsa topilmaydi
-            return found
+            found = geo.resolve_place(raw)
+            if found is None:
+                notes.append(_note("err", f"«{e(raw)}» — город или страна не найдены"))
+                return set()          # hech narsa topilmaydi
+            kind, value = found
+            return geo.cities_near(value, radius) if kind == "city" \
+                else geo.cities_in_country(value)
 
-        from_city, to_city = city("from"), city("to")
+        from_set, to_set = place("from"), place("to")
         body_type = q.get("body") or None
         status = q.get("status", "new") or None
         try:
@@ -1849,25 +1878,35 @@ def create_app() -> FastAPI:
         except ValueError:
             min_score = None
         search = (q.get("q") or "").strip() or None
+        with_price = q.get("price") == "1"
+        order = q.get("sort") if q.get("sort") in ("new", "price", "score") else "new"
 
-        rows = db.search_cargos(from_city=from_city, to_city=to_city,
+        rows = db.search_cargos(from_cities=from_set, to_cities=to_set,
                                 body_type=body_type, status=status,
-                                min_score=min_score, q=search, limit=300)
+                                min_score=min_score, q=search, limit=300,
+                                with_price=with_price, order=order)
 
         def opt(items, current):
             return "".join(f'<option value="{k}" {"selected" if k == current else ""}>'
                            f'{v}</option>' for k, v in items)
 
-        active_filters = sum(1 for k in ("from", "to", "body", "min_score", "q") if q.get(k))
+        active_filters = sum(1 for k in ("from", "to", "body", "min_score", "q", "price")
+                             if q.get(k))
+        radii = [("0", "только город"), ("50", "+50 км"), ("150", "+150 км"), ("300", "+300 км")]
+        sorts = [("new", "сначала новые"), ("price", "сначала дорогие"),
+                 ("score", "лучшие для наших фур")]
         filters = f"""<details class="fdet"{' open' if active_filters else ''}>
 <summary class="btn sm tint">{ic("filter", 15)} Фильтр{f' · {active_filters}' if active_filters else ''}</summary>
 <form class="filters" method="get">
-  <div><label>Откуда</label><input name="from" value="{e(q.get('from', ''))}" list="cities" size="12"></div>
-  <div><label>Куда</label><input name="to" value="{e(q.get('to', ''))}" list="cities" size="12"></div>
+  <div><label>Откуда</label><input name="from" value="{e(q.get('from', ''))}" list="cities" size="12" placeholder="город или страна"></div>
+  <div><label>Куда</label><input name="to" value="{e(q.get('to', ''))}" list="cities" size="12" placeholder="город или страна"></div>
+  <div><label>Вокруг города</label><select name="r">{opt(radii, str(radius))}</select></div>
   <div><label>Кузов</label><select name="body">{opt([('', 'все')] + list(BODY.items()), body_type or '')}</select></div>
   <div><label>Статус</label><select name="status">{opt([('', 'все')] + list(STATUS.items()), status or '')}</select></div>
+  <div><label>Сортировка</label><select name="sort">{opt(sorts, order)}</select></div>
   <div><label>Балл ≥</label><input name="min_score" type="number" min="0" max="100" value="{e(q.get('min_score', ''))}" style="width:80px"></div>
-  <div><label>Поиск по тексту</label><input name="q" value="{e(search or '')}" size="14"></div>
+  <div><label>Поиск по тексту</label><input name="q" value="{e(search or '')}" size="14" placeholder="арбуз, +998…"></div>
+  <div><label class="check"><input type="checkbox" name="price" value="1"{' checked' if with_price else ''}> только с ценой</label></div>
   <button class="btn primary">Показать</button> <a class="btn" href="/cargos">Сбросить</a>
 </form></details>{_city_datalist()}"""
 
@@ -2475,17 +2514,21 @@ def _search_results(found: dict, text: str) -> str:
     deals = []
     for r in found["results"]:
         c = r["cargo"]
-        match = db.find_match(c["id"], r["truck_id"])
+        match = db.find_match(c["id"], r["truck_id"]) if r.get("truck_id") else None
         actions = (_decision_buttons(match["id"]) if match
                    else f'<a class="btn sm" href="/cargo/{c["id"]}">Смотреть</a>')
-        meta = (f'<span class="tnum">№{e(r["truck_id"])}</span> · пустой {r["empty_km"]:.0f} км · '
-                f'маржа {money(r["margin_usd"])} · {e(_day_text(c.get("load_date")))}'
-                f'<br>{_cargo_line(c)}')
+        if r.get("truck_id"):
+            fleet = (f'<span class="tnum">№{e(r["truck_id"])}</span> · пустой '
+                     f'{r["empty_km"]:.0f} км · маржа {money(r["margin_usd"])}')
+        else:
+            fleet = '<span class="muted">наши фуры сейчас далеко или не подходят</span>'
+        meta = f'{fleet} · {e(_day_text(c.get("load_date")))}<br>{_cargo_line(c)}'
         deals.append(_deal(match["id"] if match else f"c{c['id']}", c["id"],
                            c["from_city"], c["to_city"], None, meta, actions,
                            right=_price_big(c)))
-    return f"""<h2 class="sec">Найдено: {len(deals)}
-<small>самые выгодные сверху · из {found['scanned']} грузов, фур: {found['trucks']}</small></h2>
+    shown = (f"показаны {len(deals)} · " if found["scanned"] > len(deals) else "")
+    return f"""<h2 class="sec">Грузов: {found['scanned']}
+<small>{shown}подходят нашим фурам: {found.get('fit', 0)} · выгодные сверху</small></h2>
 <div class="list">{''.join(deals)}</div>
 <p>{_watch_button(text)}</p>"""
 
@@ -2523,6 +2566,11 @@ def _watch_block() -> str:
 от порога балла. По истечении срока отслеживание отключится само.</p>"""
 
 
+def _num(n) -> str:
+    """12345 -> "12 345"."""
+    return f"{int(n or 0):,}".replace(",", " ")
+
+
 _SRC_STATUS = {"active": ("s-free", "читается"), "pending": ("s-later", "подключается…"),
                "error": ("s-off", "ошибка")}
 
@@ -2551,12 +2599,14 @@ def _groups_block() -> str:
 </form>"""
 
     stats = sources.cargo_stats(days=7)
+    today = sources.ingest_stats(days=1)
     rows = []
     for r in sources.list_sources():
         cls, label = _SRC_STATUS.get(r["status"], ("s-off", r["status"]))
         name = r["title"] or sources.describe_ref(r["ref"])
         user = f"@{e(r['username'])} · " if r["username"] else ""
         st = stats.get(r["username"] or "") or stats.get(r["title"] or "")
+        flow = today.get(r["username"] or "") or today.get(r["title"] or "")
         if r["status"] == "error":
             detail = f'<span class="suspect-tag">{e(r["error"] or "")}</span>'
         elif r["status"] == "pending":
@@ -2566,6 +2616,10 @@ def _groups_block() -> str:
                       f'последний {e(ago_phrase(st["last"]))}')
         else:
             detail = "за 7 дней грузов не было"
+        if flow and r["status"] == "active":
+            detail += (f'<br>Сегодня: {_num(flow["messages"])} сообщ. → '
+                       f'<b>{_num(flow["saved"])} новых грузов</b> · '
+                       f'{_num(flow["dup"])} повторов · {_num(flow["skipped"])} не груз')
         retry = (f'<form method="post" action="/groups/{r["id"]}/retry" class="inline">'
                  f'<button class="btn sm tint" title="Повторить">{ic("refresh", 15)}</button></form>'
                  if r["status"] == "error" else "")
@@ -2601,7 +2655,10 @@ def _groups_block() -> str:
 
 
 def _city_datalist() -> str:
-    options = "".join(f'<option value="{e(name)}">' for name in sorted(geo.RU.values()))
+    """Yozishda taklif: asosiy shaharlar (3 000 tasining hammasi sahifani og'irlashtiradi —
+    qolganlarini ham yozib qidirsa bo'ladi, `geo.lookup` taniydi)."""
+    names = sorted({geo.RU[n] for n in geo.MAJOR if n in geo.RU})
+    options = "".join(f'<option value="{e(name)}">' for name in names)
     return f'<datalist id="cities">{options}</datalist>'
 
 

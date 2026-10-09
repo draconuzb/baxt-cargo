@@ -92,7 +92,7 @@ def test_sorted_by_daily_margin(park):
     add("Есть груз Ташкент → Алматы, 20т тент, 1900$, 22.09")
 
     results = search.find("Ташкент")["results"]
-    per_day = [r["margin_per_day"] for r in results]
+    per_day = [r["margin_per_day"] for r in results if r["fits"]]
     assert per_day == sorted(per_day, reverse=True)
 
 
@@ -121,17 +121,43 @@ def test_single_city_matches_both_directions(park):
     assert routes == {("Toshkent", "Moskva"), ("Samarqand", "Toshkent")}
 
 
-def test_unreachable_cargo_is_hidden(park):
-    """Mashinalar Toshkentda — Qozondan chiqadigan yuk uchun 3000 km bo'sh
-    yurish kerak, bunday taklif ko'rsatilmaydi."""
+def test_unreachable_cargo_is_shown_without_truck(park):
+    """Mashinalar Toshkentda — Qozondan chiqadigan yuk uchun 3000 km bo'sh yurish.
+    Yuk baribir ko'rsatiladi (dispetcher yo'nalishni so'radi, 2026-10-09:
+    "botdan yoqadigan yuk topa olmayapman" — ilgari bunday yuklar yashirinardi),
+    lekin fura va marjasiz."""
     add("Есть груз Казань → Самара, 20т тент, 2000$, 23.09")
-    assert search.find("Казань")["results"] == []
+    found = search.find("Казань")
+    [r] = found["results"]
+    assert r["fits"] is False and r["truck_id"] is None and r["margin_usd"] is None
+    assert found["fit"] == 0
 
 
-def test_cargo_no_truck_can_take_is_hidden(park):
-    """Sig'maydigan yuk javobda ko'rinmasligi kerak — dispetcher vaqtini olmaydi."""
-    add("Есть груз Ташкент → Москва, 30 тонн тент, 5000$, 22.09")
-    assert search.find("Ташкент Москва")["results"] == []
+def test_fitting_cargo_ranks_above_market(park):
+    """Furamizga mos kelganlari tepada, qolgani — keyin."""
+    add("Есть груз Ташкент → Москва, 30 тонн тент, 5000$, 22.09")      # sig'maydi
+    add("Есть груз Ташкент → Москва, 20т тент, 4000$, 22.09")
+    results = search.find("Ташкент Москва")["results"]
+    assert [r["fits"] for r in results] == [True, False]
+    assert results[1]["cargo"]["weight_t"] == 30
+
+
+def test_city_includes_suburbs(park):
+    """"Москва" — Подольск, Балашиха ham (dispetcher joyni aytadi, shaharni emas)."""
+    add("Есть груз Ташкент → Балашиха, 20т тент, 4000$, 22.09")
+    add("Есть груз Ташкент → Тула, 20т тент, 3900$, 22.09")
+    found = search.find("Ташкент Москва")
+    assert [r["cargo"]["to_city"] for r in found["results"]] == ["Balashikha"]
+
+
+def test_country_query(park):
+    """"Узбекистан Россия" — davlat bo'yicha."""
+    add("Есть груз Самарканд → Тула, 20т тент, 3900$, 22.09")
+    add("Есть груз Самарканд → Алматы, 20т тент, 1500$, 22.09")
+    q = search.parse_query("из Узбекистана в Россию")
+    assert (q.from_country, q.to_country) == ("UZ", "RU")
+    assert [r["cargo"]["to_city"] for r in search.find(q)["results"]] == ["Tula"]
+    assert "Узбекистан → Россия" in q.describe()
 
 
 def test_taken_cargo_is_not_offered(park):
@@ -154,7 +180,7 @@ def test_search_without_trucks(clean_db, monkeypatch):
     monkeypatch.setattr("notifier.send", lambda *a, **kw: None)
     add("Есть груз Ташкент → Москва, 20т тент, 4000$, 22.09")
     found = search.find("Ташкент Москва")
-    assert found["trucks"] == 0 and found["results"] == []
+    assert found["trucks"] == 0 and [r["fits"] for r in found["results"]] == [False]
 
 
 def test_fleet_summary(park):

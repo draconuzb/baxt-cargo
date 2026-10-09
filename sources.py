@@ -219,6 +219,53 @@ def last_seen_seconds() -> float | None:
         return None
 
 
+def last_ids() -> dict[int, int]:
+    """chat_id -> listener o'qigan oxirgi xabar raqami."""
+    with db.connect() as conn:
+        rows = conn.execute("SELECT chat_id, last_msg_id FROM sources WHERE status='active'"
+                            " AND chat_id IS NOT NULL AND last_msg_id IS NOT NULL").fetchall()
+    return {int(r["chat_id"]): int(r["last_msg_id"]) for r in rows}
+
+
+def save_last_ids(ids: dict[int, int]) -> None:
+    with db.connect() as conn:
+        conn.executemany("UPDATE sources SET last_msg_id=? WHERE chat_id=?"
+                         " AND COALESCE(last_msg_id, 0) < ?",
+                         [(mid, str(cid), mid) for cid, mid in ids.items()])
+
+
+def flush_stats(counts: dict[tuple[str, str], int]) -> None:
+    """pipeline.STATS -> ingest_stats (bugungi kun). counts: {(manba, kalit): n}."""
+    per: dict[str, dict[str, int]] = {}
+    for (source, key), n in counts.items():
+        per.setdefault(source or "?", {})[key] = n
+    if not per:
+        return
+    day = db.utc_now().date().isoformat()
+    with db.connect() as conn:
+        for source, c in per.items():
+            conn.execute(
+                "INSERT INTO ingest_stats (day, source, messages, saved, dup, skipped)"
+                " VALUES (?,?,?,?,?,?) ON CONFLICT(day, source) DO UPDATE SET"
+                " messages=messages+excluded.messages, saved=saved+excluded.saved,"
+                " dup=dup+excluded.dup, skipped=skipped+excluded.skipped",
+                (day, source, c.get("messages", 0), c.get("saved", 0), c.get("dup", 0),
+                 c.get("skipped", 0)))
+
+
+def ingest_stats(days: int = 1) -> dict[str, dict]:
+    """Manba -> {messages, saved, dup, skipped} oxirgi `days` kun (bugun ham)."""
+    since = (db.utc_now().date().toordinal() - days + 1)
+    from datetime import date
+    with db.connect() as conn:
+        rows = conn.execute(
+            "SELECT source, SUM(messages) AS messages, SUM(saved) AS saved, SUM(dup) AS dup,"
+            " SUM(skipped) AS skipped FROM ingest_stats WHERE day >= ? GROUP BY source",
+            (date.fromordinal(since).isoformat(),)).fetchall()
+    return {r["source"]: {k: r[k] or 0 for k in ("messages", "saved", "dup", "skipped")}
+            for r in rows}
+
+
 def cargo_stats(days: int = 7) -> dict[str, dict]:
     """Manba nomi (username yoki sarlavha) -> {n: yuklar soni, last: oxirgisi}."""
     with db.connect() as conn:

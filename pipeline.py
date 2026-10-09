@@ -7,6 +7,8 @@ solishtirish -> eng yaxshi moslik bo'lsa dispetcherga xabar.
 from __future__ import annotations
 
 import logging
+import threading
+from collections import Counter
 from datetime import datetime
 
 import config
@@ -22,6 +24,24 @@ log = logging.getLogger("pipeline")
 # Shu balldan past mosliklar bildirishnoma qilinmaydi (bazada qoladi)
 NOTIFY_THRESHOLD = 65.0
 
+# Oqim hisobi: {(manba, "messages"|"saved"|"dup"|"skipped"): n}. Listener har
+# 30 s bazaga yozadi (`take_stats` -> `sources.flush_stats`) — panelda guruh
+# bo'yicha "keldi / yangi yuk / takror / yuk emas" ko'rinadi.
+STATS: Counter = Counter()
+_STATS_LOCK = threading.Lock()
+
+
+def _count(source: str, key: str, n: int = 1) -> None:
+    with _STATS_LOCK:
+        STATS[(source, key)] += n
+
+
+def take_stats() -> dict:
+    with _STATS_LOCK:
+        out = dict(STATS)
+        STATS.clear()
+    return out
+
 
 def handle_message(text: str, source: str = "", msg_id: int | None = None,
                    posted_at: datetime | None = None, notify: bool = True) -> list[int]:
@@ -32,20 +52,29 @@ def handle_message(text: str, source: str = "", msg_id: int | None = None,
     qolganlarini to'xtatmaydi.
     """
     saved: list[int] = []
+    outcomes: list[str] = []
     for cargo in parser.parse_many(text, source=source, msg_id=msg_id,
                                    posted_at=posted_at):
         try:
-            cargo_id = _handle_one(cargo, notify=notify)
+            cargo_id = _handle_one(cargo, notify=notify, outcome=outcomes)
         except Exception:
             log.exception("Yukni qayta ishlashda xato: %s -> %s",
                           cargo.from_city, cargo.to_city)
             continue
         if cargo_id is not None:
             saved.append(cargo_id)
+    _count(source, "messages")
+    if saved:
+        _count(source, "saved", len(saved))
+    elif "dup" in outcomes:
+        _count(source, "dup")
+    else:
+        _count(source, "skipped")
     return saved
 
 
-def _handle_one(cargo: parser.Cargo, notify: bool = True) -> int | None:
+def _handle_one(cargo: parser.Cargo, notify: bool = True,
+                outcome: list | None = None) -> int | None:
     if not parser.is_usable(cargo):
         # Regex uddalay olmadi. LLM ulangan bo'lsa — qayta urinib ko'ramiz.
         # Bo'sh mashina e'loni uchun so'ramaymiz: u bizga baribir kerak emas,
@@ -63,7 +92,11 @@ def _handle_one(cargo: parser.Cargo, notify: bool = True) -> int | None:
 
     is_dup, existing = dedup.is_duplicate(cargo)
     if is_dup:
-        log.info("Dubl: %s -> %s (mavjud #%s)", cargo.from_city, cargo.to_city, existing)
+        # E'lon qayta joylandi — asl yuk hali tirik (ro'yxatdan eskirib ketmasin)
+        db.touch_cargo(existing, cargo.posted_at)
+        if outcome is not None:
+            outcome.append("dup")
+        log.debug("Dubl: %s -> %s (mavjud #%s)", cargo.from_city, cargo.to_city, existing)
         return None
 
     cargo_id = db.insert_cargo(cargo, dedup.fingerprint(cargo))

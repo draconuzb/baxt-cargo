@@ -1065,7 +1065,7 @@ def _free_text(chat_id, text: str, chat_type: str = "private") -> None:
     if chat_type == "private" and _ai(chat_id, text):
         return
     query = search.parse_query(text)
-    if not (query.from_city or query.to_city or query.single_city):
+    if not query.has_place:
         if any(word in text.lower() for word in
                ("мошина", "машин", "парк", "mashina", "fleet")):
             cmd_fleet(chat_id, [])

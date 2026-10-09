@@ -190,8 +190,11 @@ def test_blank_line_blocks_are_separate_cargos():
             "Погрузка 01.10.2026\n\n+998XXXXXXXXX\n\n\n\n🇺🇿Ферган–\n🇷🇺Москва (Балашиха)\n"
             "Реф\n22 тонны\n\n +998XXXXXXXXX")
     items = parser.parse_many(post)
-    assert [(c.from_city, c.to_city) for c in items] == [("Farg'ona", "Moskva")]
-    assert items[0].weight_t == 22 and items[0].rate is None   # Daniya narxi yopishmadi
+    # Daniya — faqat davlat: asosiy shahri (Kopengagen) bilan, narxi o'zida qoladi
+    assert [(c.from_city, c.to_city) for c in items] == [("Copenhagen", "Toshkent"),
+                                                          ("Farg'ona", "Moskva")]
+    assert items[0].rate == 13000 and items[0].weight_t == 20
+    assert items[1].weight_t == 22 and items[1].rate is None   # Daniya narxi yopishmadi
 
 
 def test_one_cargo_written_in_blocks_still_one():

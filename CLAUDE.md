@@ -44,7 +44,8 @@ ga xarajatlar, `python main.py calibrate` ga reyslar.
 |---|---|
 | `config.py` | Boshlang'ich sozlamalar. **Tahrirlanmaydi** |
 | `settings.py` | Panelda o'zgartirilgan sozlamalar (`settings` jadvali, 30 s kesh) |
-| `geo.py` | Shaharlar, masofa, yo'nalish koeffitsientlari, `nearest_city`, OSRM, ruscha nom (`ru`) |
+| `geo.py` | Shaharlar (`_RAW` + `cities.tsv`), viloyat/davlat nomlari, masofa, `cities_near`, OSRM, ruscha nom (`ru`) |
+| `cities.tsv` | ~2 900 shahar va 300 viloyat (GeoNames). Qo'lda tahrirlanmaydi — `deploy/build_cities.py` |
 | `parser.py` | E'lon → `Cargo`; `parse_many` — bir postda bir nechta yuk |
 | `dedup.py` | 3 bosqichli dubl filtri (sana boshqa bo'lsa — boshqa yuk) |
 | `db.py` | SQLite + `_migrate` (yangi ustunlar shu yerda) |
@@ -52,7 +53,7 @@ ga xarajatlar, `python main.py calibrate` ga reyslar.
 | `pipeline.py` | Xabarning to'liq yo'li; `handle_message` → `list[int]` |
 | `actions.py` | "Olaman"/"O'tkazish" — bot va panel uchun **yagona** mantiq |
 | `search.py` | Dispetcher so'rovi ("Toshkent Moskva") → park bo'yicha javob |
-| `listener.py` | Telethon (yagona async modul), FloodWait, qayta ulanish; guruhlar ro'yxati bazadan (har 30 s) |
+| `listener.py` | Telethon (yagona async modul), FloodWait, qayta ulanish; guruhlar bazadan (har 30 s); tutib olish (`poll_once`, har 45 s) |
 | `sources.py` | Kuzatiladigan guruhlar: panel "Ещё → Группы" va bot `/group` qo'shadi, listener ulaydi |
 | `bot.py` | Tugmalar, buyruqlar, haydovchi `/link` + Live Location |
 | `notifier.py` | Telegram matnlari (ruscha), soatlik cheklov |
@@ -68,7 +69,7 @@ ga xarajatlar, `python main.py calibrate` ga reyslar.
 | `ai_eval.py` | AI sifat sinovi: `python main.py ai-eval` (baza nusxasida) |
 | `llm_parser.py` | Ixtiyoriy LLM fallback: Ollama/Mistral/Groq/OpenRouter/Anthropic |
 | `main.py` | CLI |
-| `deploy/` | systemd (listener, bot, web), `backup.sh` |
+| `deploy/` | systemd (listener, bot, web), `backup.sh`, `build_cities.py` |
 
 ## Tekshirish
 
@@ -204,3 +205,31 @@ Har qanday o'zgartirishdan keyin `python main.py demo` va `pytest` ishlashi shar
     `WATCH` ni yangilaydi, `listener_seen` yuragini yozadi; akkaunt guruhlarini
     har 10 daqiqada `tg_dialogs` ga. Bir siklda bittadan ortiq qo'shilmasin
     (akkaunt bloklanadi — `JOINS_PER_CYCLE`).
+34. **Oqim to'liqligi** (audit 2026-10-08: 2 soatda 7 141 xabar, bazaga ~20 yuk).
+    Tekshiruv usuli: listener'ni to'xtatib, guruhlarning HAMMA xabarini olib, bazaga
+    solishtirish (scratchpad `audit_fetch.py`/`audit_analyze.py` kabi). Qoidalar:
+    • `fingerprint` UNIQUE, lekin dubl faqat oyna ichida — eski yozuv bilan to'qnashuv
+      YANGI yuk (`db.insert_cargo` eski izni `fp@id` qilib arxivlaydi). Ilgari sanasiz
+      takroriy e'lonlar butunlay jimgina tashlanardi.
+    • Qayta joylangan e'lon asl yukni yangilaydi (`db.touch_cargo`, `seen_at` = e'lon
+      vaqti); eskirgani qaytadan `new`. Vaqt oynalari `created_at` emas, `db._SEEN`.
+    • Listener: hodisa + so'rov (`poll_once`, `LAST_ID` bazada `sources.last_msg_id`).
+      Qayta ishga tushganda `CATCHUP_HOURS` gacha tutib oladi; 15 daqiqadan eski
+      e'longa kartochka yuborilmaydi. Har guruh hisobi — `ingest_stats` (panel "Группы").
+    • Ko'p dubl log'i `DEBUG` da (kuniga 70 mingdan ortiq qator edi).
+35. **Shahar lug'ati**: kuratorlik `_RAW` (nom/koordinata o'zgarmaydi, bazadagi kalit) +
+    `cities.tsv`. Taxminiy qidiruv faqat `FUZZY_COUNTRIES` dagi katta shaharlar bilan
+    ("tent"→Trento, "turi"→Turin bo'lgan). Oddiy so'z shaharga aylansa — builder'dagi
+    `BLACKLIST` ga, keyin `test_common_words_are_not_cities`. Viloyat ("Qashqadaryo
+    viloyati") → markaz shahri; faqat davlat ("Италия - Ташкент") → `geo.COUNTRY_HUB`
+    (taxminiy, faqat yo'q tomon uchun). "Москва (Балашиха)" — bitta joy (`_merge_suburbs`).
+    `lookup` keshlanadi (`lru_cache`) — lug'atni testda o'zgartirsangiz `geo._lookup.cache_clear()`.
+36. **Qidiruv yo'nalishni yashirmaydi** (buyurtmachi 2026-10-09: "botdan yoqadigan yuk
+    topa olmayapman"): "Ташкент Москва" — shu yo'nalishdagi HAMMA yuk; furamizga mosi
+    tepada (kunlik marja), qolgani "наши фуры далеко" bilan (`search.find` → `fits`).
+    Shahar = atrofi bilan (`search.NEAR_KM`), davlat ham bo'ladi ("Узбекистан Россия").
+    AI so'ralgan yo'nalishni boshqasiga almashtirmaydi (`find_cargo` → `fleet_fit: false`).
+    Panel filtri: shahar/davlat, radius, "только с ценой", saralash, matn kirillda ham.
+37. **Tasnif**: platformalar e'lon ostiga reklama qo'shadi ("Sizda ham yuk yoki bo'sh
+    mashina bormi?") — bu qatorlar tasnifdan oldin olib tashlanadi (`_RE_PROMO_LINE`),
+    aks holda yuk e'loni "bo'sh mashina" bo'lib tashlanardi.

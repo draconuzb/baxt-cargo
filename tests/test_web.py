@@ -8,6 +8,7 @@ bajarilmaydi, tahrirlangan shahar kanonik nomga keltiriladi.
 from __future__ import annotations
 
 import time
+from urllib.parse import urlencode
 
 import pytest
 
@@ -230,6 +231,27 @@ def test_cargos_filter_canonical_city(client):
 
 def test_cargos_unknown_city_note(client):
     assert "не найден" in client.get("/cargos?from=Кукуево").text
+
+
+def test_cargos_filter_suburbs_country_text(client, monkeypatch):
+    """Filtr: "Москва" — atrofi bilan; davlat; matn katta-kichik harfga qaramaydi."""
+    monkeypatch.setattr("notifier.send", lambda *a, **kw: None)
+    for t in ("Есть груз Ташкент → Балашиха, 20т тент, АРБУЗ 4000$",
+              "Есть груз Самарканд → Тула, 20т тент, 3900$",
+              "Есть груз Бухара → Алматы, 20т тент"):
+        pipeline.handle_message(t)
+
+    def listing(**params):              # shaharlar ro'yxati (datalist) dan keyingi qism
+        return client.get("/cargos?" + urlencode(params)).text.split("</datalist>")[-1]
+
+    near = listing(to="Москва")
+    assert "Балашиха" in near and "Тула" not in near
+    assert "Балашиха" not in listing(to="Москва", r="0")
+    ru = listing(to="Россия")
+    assert "Балашиха" in ru and "Тула" in ru and "Алматы" not in ru
+    assert "Балашиха" in listing(q="арбуз")
+    priced = listing(price="1")
+    assert "Бухара" not in priced and "Тула" in priced
 
 
 def test_raw_text_is_escaped(client):

@@ -74,7 +74,21 @@ JOINS_PER_CYCLE = 1              # bir siklda bitta guruh — akkaunt bloklanmas
 BACKFILL_NEW = 60                # yangi guruhdan oxirgi xabarlar…
 BACKFILL_HOURS = 24              # …faqat shu muddat ichidagilari
 
+# Tutib olish: Telegram katta guruhlarning yangilanishini har doim ham
+# yetkazmaydi, listener qayta ishga tushganda esa o'sha daqiqalar yo'qolardi.
+# Har POLL_SEC da har guruhdan oxirgi o'qilgan raqamdan keyingilar so'raladi.
+POLL_SEC = 45
+POLL_LIMIT = 400                 # bir guruhdan bir so'rovda
+CATCHUP_HOURS = 6                # qayta ishga tushganda shu muddatgacha orqaga
+NOTIFY_MAX_AGE_SEC = 900         # kechikib olingan eski e'lon uchun kartochka yuborilmaydi
+SEEN_PER_CHAT = 5000
+
 WATCH: set[int] = set()          # tinglanayotgan chat id lar (-100…)
+# chat -> so'rov ketma-ket tekshirgan oxirgi raqam (0 — hali yo'q). Hodisalar uni
+# surmaydi: hodisa 100-ni olib, 99-ni o'tkazib yuborsa ham so'rov 99-ga yetadi.
+LAST_ID: dict[int, int] = {}
+_SEEN: dict[int, dict[int, None]] = {}
+_ENTITIES: dict[int, object] = {}
 
 
 def _peer_id(entity) -> int:
@@ -142,10 +156,13 @@ async def _backfill_recent(client, entity) -> int:
     from datetime import datetime, timedelta, timezone
     since = datetime.now(timezone.utc) - timedelta(hours=BACKFILL_HOURS)
     source, saved = _source_name(entity), 0
+    cid = _peer_id(entity)
     async for m in client.iter_messages(entity, limit=BACKFILL_NEW):
+        if m.id > LAST_ID.get(cid, 0):
+            LAST_ID[cid] = m.id          # so'rov shu yerdan davom etadi
         if m.date is not None and m.date < since:
             break
-        if not m.message or len(m.message) < 15:
+        if not _claim(cid, m.id) or not m.message or len(m.message) < 15:
             continue
         try:
             saved += len(await asyncio.to_thread(pipeline.handle_message, m.message, source,
@@ -185,7 +202,87 @@ async def sync_sources(client) -> None:
         await asyncio.sleep(RESOLVE_DELAY_SEC)
     WATCH.clear()
     WATCH.update(sources.active_chat_ids())
+    sources.save_last_ids({c: i for c, i in LAST_ID.items() if i})
+    sources.flush_stats(pipeline.take_stats())
     sources.heartbeat()
+
+
+def _claim(chat_id: int, msg_id: int) -> bool:
+    """Xabar birinchi marta ko'rilyaptimi (hodisa va so'rov bir xabarni ikki
+    marta ishlamasin). Bitta event loop ichida — qulf kerak emas."""
+    seen = _SEEN.setdefault(chat_id, {})
+    if msg_id in seen:
+        return False
+    seen[msg_id] = None
+    if len(seen) > SEEN_PER_CHAT:
+        del seen[next(iter(seen))]
+    return True
+
+
+async def _process(chat_id: int, msg, source: str) -> bool:
+    """Bitta guruh xabari -> pipeline (hodisadan ham, so'rovdan ham).
+    Qaytaradi: xabar shu chaqiruvda ishlandimi (avval ko'rilmaganmi)."""
+    if not _claim(chat_id, msg.id):
+        return False
+    text = msg.message or ""
+    if len(text) < 15:
+        pipeline._count(source, "messages")
+        pipeline._count(source, "skipped")
+        return True
+    from datetime import datetime, timezone
+    age = (datetime.now(timezone.utc) - msg.date).total_seconds() if msg.date else 0
+    try:
+        await asyncio.to_thread(pipeline.handle_message, text, source, msg.id, msg.date,
+                                notify=age <= NOTIFY_MAX_AGE_SEC)
+    except Exception:
+        log.exception("Xabarni qayta ishlashda xato")
+    return True
+
+
+async def _entity(client, chat_id: int):
+    ent = _ENTITIES.get(chat_id)
+    if ent is None:
+        ent = await client.get_entity(chat_id)
+        _ENTITIES[chat_id] = ent
+    return ent
+
+
+async def poll_once(client) -> int:
+    """Har guruhdan o'tkazib yuborilgan xabarlar (oxirgi o'qilgan raqamdan keyin).
+
+    Raqam noma'lum bo'lsa (yangi guruh, birinchi ishga tushish) — CATCHUP_HOURS
+    oldidan boshlanadi. Eskidan yangiga, har safar POLL_LIMIT tadan.
+    """
+    from datetime import datetime, timedelta, timezone
+    since = datetime.now(timezone.utc) - timedelta(hours=CATCHUP_HOURS)
+    done = 0
+    for cid in list(WATCH):
+        try:
+            ent = await _entity(client, cid)
+            source = _source_name(ent)
+            async for m in client.iter_messages(ent, reverse=True, offset_date=since,
+                                                min_id=LAST_ID.get(cid, 0), limit=POLL_LIMIT):
+                if await _process(cid, m, source):
+                    done += 1            # hodisa o'tkazib yuborgan xabar
+                if m.id > LAST_ID.get(cid, 0):
+                    LAST_ID[cid] = m.id
+        except FloodWaitError as e:
+            await _sleep_flood(e, "poll")
+        except Exception:
+            log.exception("Guruhni tekshirishda xato (%s)", cid)
+        await asyncio.sleep(0.5)
+    return done
+
+
+async def _poll_loop(client) -> None:
+    while True:
+        try:
+            n = await poll_once(client)
+            if n:
+                log.info("Tutib olindi: %d ta xabar", n)
+        except Exception:
+            log.exception("Tutib olishda xato")
+        await asyncio.sleep(POLL_SEC)
 
 
 async def refresh_dialogs(client) -> int:
@@ -221,6 +318,7 @@ async def _sync_loop(client) -> None:
 async def run() -> None:
     db.init()
     sources.migrate_from_file(config.load_sources())
+    LAST_ID.update(sources.last_ids())
 
     client = TelegramClient(config.TG_SESSION, config.TG_API_ID, config.TG_API_HASH)
     await client.start()
@@ -235,20 +333,12 @@ async def run() -> None:
     async def handler(event):
         if event.chat_id not in WATCH:
             return                       # shaxsiy xabarlar va kuzatilmaydigan guruhlar
-        text = event.message.message or ""
-        if len(text) < 15:
-            return
         chat = await event.get_chat()
-        source = _source_name(chat)
-        try:
-            await asyncio.to_thread(
-                pipeline.handle_message, text, source, event.message.id,
-                event.message.date,
-            )
-        except Exception:
-            log.exception("Xabarni qayta ishlashda xato")
+        await _process(event.chat_id, event.message, _source_name(chat))
 
-    asyncio.get_running_loop().create_task(_sync_loop(client))
+    loop = asyncio.get_running_loop()
+    loop.create_task(_sync_loop(client))
+    loop.create_task(_poll_loop(client))
     log.info("Tinglash boshlandi — %d guruh", len(WATCH))
     # Uzilib qolsa qayta ulanadi: 24/7 ishlashi kerak
     while True:

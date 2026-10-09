@@ -72,11 +72,20 @@ _CARGO_MARKERS = [
     "требуется машина", "требуются машины", "ищу машину", "ищем машину",
     "ищу транспорт", "под загрузку", "загрузка", "yuk bor", "mashina kerak",
     "yuk chiqdi", "mashina kutilmoqda", "груз:", "gruz",
+    "yuk e'loni", "yangi yuk", "xalqaro yuk", "mahalliy yuk", "yuk:", "юк бор",
 ]
+
+# Platformalar (glogistics, trunck.uz…) e'lon ostiga reklama qo'shadi:
+# "Sizda ham yuk yoki bo'sh mashina bormi?" — "bo'sh mashina" so'zi tufayli
+# YUK e'loni bo'sh mashina deb tashlanardi (audit 2026-10-08: 2 soatda 1350 ta).
+_RE_PROMO_LINE = re.compile(
+    r"^.*(?:sizda ham|e'loningiz|joylang|saytga kir|saytimiz|ilovani|ilovasida|"
+    r"у вас тоже|у вас есть груз|разместите|скачайте|наш сайт|наш бот).*$",
+    re.MULTILINE)
 
 
 def classify(text: str) -> str:
-    t = normalize(text)
+    t = _RE_PROMO_LINE.sub("", normalize(text))
     truck_hit = any(m in t for m in _TRUCK_MARKERS)
     cargo_hit = any(m in t for m in _CARGO_MARKERS)
     if truck_hit and not cargo_hit:
@@ -344,6 +353,66 @@ def _route_role(words: list[str], i: int) -> str | None:
 
 def _parse_route(t: str) -> tuple[str | None, str | None, list[str]]:
     cities = geo.find_cities(t)
+    frm, to, via = _route_from_cities(t, cities)
+    if cities and (frm is None or to is None):
+        frm, to = _country_side(t, cities, frm, to)
+    return frm, to, via
+
+
+def _country_side(t: str, cities, frm, to) -> tuple[str | None, str | None]:
+    """Bir tomonida faqat davlat yozilgan: "Италия - Ташкент", "Samara ➡️ O'zbekiston".
+
+    Yo'q tomon uchun davlatning asosiy shahri (`geo.COUNTRY_HUB`) olinadi:
+    yuk ro'yxatda ko'rinadi, masofa taxminiy. Davlat ma'lum shahar bilan bir
+    xil bo'lsa — bu shaharning izohi ("Ташкент (Узбекистан)"), olinmaydi.
+    """
+    known = to if frm is None else frm
+    if known is None:
+        return frm, to
+    words = geo._norm(t).split()
+    pos = next(p for p, name in cities if name == known)
+    home = geo.CITIES[known].country
+
+    def hub_in(indexes) -> str | None:
+        for i in indexes:
+            code = geo.country_of_word(words[i])
+            if code and code != home and geo.COUNTRY_HUB.get(code) in geo.CITIES:
+                return geo.COUNTRY_HUB[code]
+        return None
+
+    if frm is None:                       # "→ Ташкент": davlat shahardan oldin
+        hub = hub_in(range(0, pos))
+        return (hub, to) if hub else (frm, to)
+    # Bitta shahar (belgisiz "qayerdan" deb olingan): davlat oldinda bo'lsa —
+    # u jo'nash joyi ("Италия - Ташкент"), keyin bo'lsa — manzil ("Самара → Узбекистан")
+    hub = hub_in(range(0, pos))
+    if hub:
+        return hub, frm
+    hub = hub_in(range(pos + 1, len(words)))
+    return (frm, hub) if hub else (frm, to)
+
+
+SUBURB_KM = 30
+
+
+def _merge_suburbs(names: list[str]) -> list[str]:
+    """"Москва (Балашиха)" — bitta joy, ikki shahar emas: yonma-yon kelgan va
+    30 km ichidagi shaharlardan kuratorlik qilingani (asosiysi) qoladi.
+    Ikkalasi ham asosiy bo'lsa (Toshkent — Chirchiq) — bu haqiqiy yo'nalish."""
+    out: list[str] = []
+    for name in names:
+        prev = out[-1] if out else None
+        a, b = geo.CITIES.get(prev or ""), geo.CITIES.get(name)
+        if a and b and (prev not in geo.CURATED or name not in geo.CURATED) \
+                and geo.haversine_km(a, b) <= SUBURB_KM:
+            if prev not in geo.CURATED and name in geo.CURATED:
+                out[-1] = name
+            continue
+        out.append(name)
+    return out
+
+
+def _route_from_cities(t: str, cities) -> tuple[str | None, str | None, list[str]]:
     if not cities:
         return None, None, []
     words = geo._norm(t).split()
@@ -359,6 +428,10 @@ def _parse_route(t: str) -> tuple[str | None, str | None, list[str]]:
             to = rest.pop(0)
         return frm, to, []
     names = [c[1] for c in cities]
+    # Shablon yo'nalishni ikki marta yozadi: "Namangan ➡️ Qarshi ... Yuk: Namangan ➡️ Qarshi"
+    while len(names) >= 4 and names[:2] == names[2:4]:
+        names = names[:2] + names[4:]
+    names = _merge_suburbs(names)
     if len(names) == 1:
         return names[0], None, []
     if len(names) > 2:

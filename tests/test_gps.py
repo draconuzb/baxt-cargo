@@ -55,8 +55,8 @@ def test_nearest_city_too_far_returns_none():
 
 def test_nearest_city_respects_limit():
     """Dashtdagi nuqta: 150 km ichida shahar yo'q."""
-    far = geo.nearest_city(48.0, 62.0, max_km=150)
-    near = geo.nearest_city(48.0, 62.0, max_km=1000)
+    far = geo.nearest_city(46.5, 58.5, max_km=150)        # Ustyurt / Orol bo'yi
+    near = geo.nearest_city(46.5, 58.5, max_km=1000)
     assert far is None
     assert near is not None
 

@@ -33,3 +33,6 @@ backup_*/
 *.session*
 .login_hash
 tg_login.py
+
+# GeoNames xom fayllari (deploy/build_cities.py)
+gn/

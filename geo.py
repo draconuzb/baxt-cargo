@@ -6,6 +6,7 @@ variantlar) va ikki nuqta orasidagi taxminiy yo'l masofasini berish.
 """
 from __future__ import annotations
 
+import functools
 import logging
 import math
 import re
@@ -14,14 +15,23 @@ from dataclasses import dataclass
 
 try:
     from rapidfuzz import fuzz as _fuzz
+    from rapidfuzz import process as _process
 
     def _ratio(a: str, b: str) -> float:
         return _fuzz.ratio(a, b) / 100.0
+
+    def _best_match(t: str, pool: list[str]) -> tuple[str, float] | None:
+        hit = _process.extractOne(t, pool, scorer=_fuzz.ratio)
+        return (hit[0], hit[1] / 100.0) if hit else None
 except ImportError:  # rapidfuzz bo'lmasa stdlib bilan ishlaydi
     from difflib import SequenceMatcher
 
     def _ratio(a: str, b: str) -> float:
         return SequenceMatcher(None, a, b).ratio()
+
+    def _best_match(t: str, pool: list[str]) -> tuple[str, float] | None:
+        best = max(pool, key=lambda a: _ratio(t, a), default=None)
+        return (best, _ratio(t, best)) if best is not None else None
 
 
 # (kanonik nom, lat, lon, davlat, "alias1|alias2|...")
@@ -145,7 +155,84 @@ _RAW = [
     ("Varshava", 52.2297, 21.0122, "PL", "варшава|warsaw|warszawa"),
     ("Riga", 56.9496, 24.1052, "LV", "рига|riga"),
     ("Vilnyus", 54.6872, 25.2797, "LT", "вильнюс|vilnius"),
+    # ---- Chegara punktlari (e'lonlarda ko'p, GeoNames ro'yxatida yo'q) ----
+    ("Xayraton", 37.2333, 67.4167, "AF", "хайратан|hairatan|xayraton|hayraton"),
+    ("Lotfabad", 37.5167, 59.3500, "IR", "лотфабад|лотфабод|lotfabad|lotfobod"),
+    ("Saraxs", 36.5449, 61.1577, "IR", "серахс|сарахс|sarakhs|saraxs|seraxs"),
+    ("Alashankou", 45.1700, 82.5700, "CN", "алашанькоу|alashankou|alashankov"),
+    ("Xorgos", 44.2150, 80.4100, "KZ", "хоргос|horgos|khorgos|xorgos|qorgos"),
+    ("Dostyk", 45.2500, 82.4800, "KZ", "достык|dostyk|druzhba kpp"),
+    ("Irkeshtam", 39.6800, 73.9000, "KG", "иркештам|irkeshtam|irkishtom"),
+    ("Qorako'l", 39.4994, 63.8536, "UZ", "каракуль|каракул|qorako'l|qorakol|qorakul|karakul"),
 ]
+
+# Kuratorlik qilingan qo'shimcha nomlar (lug'atda yo'q, e'lonlarda bor).
+# "Водий" — Farg'ona vodiysi: Andijon/Namangan/Farg'ona, markazi Farg'ona.
+_EXTRA_ALIASES = {
+    "Farg'ona": "водий|vodiy|водийга|vodiyga|водийдан|vodiydan|фаргона|fargʻona",
+    "Qo'qon": "кокон|quqon|қуқон|куқон|kokon",
+    "Moskva": "подмосковье|podmoskovye|московская обл|моск обл",
+    "Sankt-Peterburg": "ленинградская обл|санкт петербург|с-петербург|с петербург",
+    "Toshkent": "ташкент обл|тошкент вил|toshkent vil",
+    # O'zbekcha yozilishi (shablonli e'lonlar: "Olmaota shahri", "Ostona shahri")
+    "Almaty": "olmaota|олмаота|olma-ota|алма ата",
+    "Astana": "ostona|остона",
+    "Qaraganda": "qorag'andi|qoragandi|қарағанды|qarag'andi",
+    "Ashxabad": "ashxobod|ашхобод|ashgabad",
+    "Krasnodar": "krosnadar|кроснадар|korsnador|krasnador|краснадар|кроснодар",
+    "Bishkek": "bishkent|бишкент",
+}
+
+# Faqat davlat yozilgan e'lon ("Италия — Ташкент", "Rossiya ➡️ Toshkent"):
+# yo'nalishning shu tomoni uchun asosiy logistika shahri (taxminiy).
+# Shahar topilgan tomonga tegilmaydi (`parser._parse_route`).
+COUNTRY_HUB = {
+    "UZ": "Toshkent", "RU": "Moskva", "KZ": "Almaty", "KG": "Bishkek", "TJ": "Dushanbe",
+    "TM": "Ashxabad", "BY": "Minsk", "TR": "Istanbul", "CN": "Urumchi", "IR": "Tehron",
+    "AF": "Mozori Sharif", "AZ": "Boku", "GE": "Tbilisi", "AM": "Yerevan", "PL": "Varshava",
+    "LT": "Vilnyus", "LV": "Riga", "IT": "Milan", "DE": "Berlin", "NL": "Rotterdam",
+    "FR": "Paris", "ES": "Madrid", "BE": "Brussels", "CZ": "Prague", "AT": "Vienna",
+    "HU": "Budapest", "FI": "Helsinki", "EE": "Tallinn", "DK": "Copenhagen", "SE": "Stockholm",
+    "RO": "Bucharest", "BG": "Sofia", "SK": "Bratislava", "UA": "Kyiv", "MD": "Chisinau",
+}
+_COUNTRY_RAW = {
+    "UZ": "узбекистан|ўзбекистон|узбекистон|o'zbekiston|ozbekiston|uzbekistan",
+    "RU": "россия|рф|rossiya|russia|русия",
+    "KZ": "казахстан|қозоғистон|qozog'iston|qozogiston|kazakhstan",
+    "KG": "кыргызстан|киргизия|қирғизистон|qirg'iziston|kyrgyzstan",
+    "TJ": "таджикистан|тожикистон|tojikiston|tajikistan",
+    "TM": "туркменистан|туркманистон|turkmaniston|turkmenistan",
+    "BY": "беларусь|белоруссия|belarus|беларус",
+    "TR": "турция|turkiya|turkey|туркия",
+    "CN": "китай|xitoy|хитой|china",
+    "IR": "иран|eron|эрон|iran",
+    "AF": "афганистан|афганстан|afg'oniston|afgoniston|afghanistan",
+    "AZ": "азербайджан|ozarbayjon|azerbaijan",
+    "GE": "грузия|gruziya|georgia",
+    "AM": "армения|armaniston|armenia",
+    "PL": "польша|polsha|poland",
+    "LT": "литва|litva|lithuania",
+    "LV": "латвия|latviya|latvia",
+    "IT": "италия|italiya|italy",
+    "DE": "германия|germaniya|germany",
+    "NL": "нидерланды|голландия|gollandiya|netherlands",
+    "FR": "франция|fransiya|france",
+    "ES": "испания|ispaniya|spain",
+    "BE": "бельгия|belgiya|belgium",
+    "CZ": "чехия|chexiya|czech",
+    "AT": "австрия|avstriya|austria",
+    "HU": "венгрия|vengriya|hungary",
+    "FI": "финляндия|finlandiya|finland",
+    "EE": "эстония|estoniya|estonia",
+    "DK": "дания|daniya|denmark",
+    "SE": "швеция|shvetsiya|sweden",
+    "RO": "румыния|ruminiya|romania",
+    "BG": "болгария|bolgariya|bulgaria",
+    "SK": "словакия|slovakiya|slovakia",
+    "UA": "украина|ukraina|ukraine",
+    "MD": "молдова|молдавия|moldova",
+}
+COUNTRY_INDEX: dict[str, str] = {}
 
 
 @dataclass(frozen=True)
@@ -158,6 +245,9 @@ class City:
 
 CITIES: dict[str, City] = {}
 _ALIAS_INDEX: dict[str, str] = {}  # alias -> kanonik nom
+CURATED = {row[0] for row in _RAW}  # qo'lda tekshirilgan asosiy shaharlar
+MAJOR_MIN_POP = 150_000
+MAJOR: set[str] = set(CURATED)      # panel taklif ro'yxati (datalist) uchun
 
 # Shahar deb xato topilmasligi kerak bo'lgan keng tarqalgan so'zlar
 _STOPWORDS = {
@@ -172,6 +262,7 @@ _STOPWORDS = {
 def _norm(s: str) -> str:
     s = s.lower().replace("ё", "е").replace("ў", "у").replace("қ", "к")
     s = s.replace("ғ", "г").replace("ҳ", "х").replace("ʻ", "'").replace("`", "'")
+    s = s.replace("’", "'").replace("_", " ")         # "Фаргона_Ставрополь"
     s = re.sub(r"[^\w\s'-]", " ", s, flags=re.UNICODE)
     return re.sub(r"\s+", " ", s).strip()
 
@@ -190,16 +281,100 @@ def _ru_title(alias: str) -> str:
                    for p in parts)
 
 
+# Taxminiy qidiruv (xato yozilgan nom) faqat shu nomlar ichida: kuratorlik
+# qilinganlar va katta shaharlar. Kichik shaharcha bilan taxminiy moslik —
+# yolg'on topilma ("Korsnador" katta shaharga yaqin, qishloqqa emas).
+_FUZZY: dict[int, list[str]] = {}
+FUZZY_MIN_POP = 100_000
+# Faqat shu davlatlar: Yevropa/Xitoy/Eron nomlari bilan taxminiy moslik oddiy
+# so'zlarni shaharga aylantirardi ("tent" -> Trento, "turi" -> Turin, "сахар" -> Ahar)
+FUZZY_COUNTRIES = {"UZ", "KZ", "KG", "TJ", "TM", "RU", "BY"}
+CITIES_FILE = "cities.tsv"
+
+
+def _add_alias(alias: str, name: str) -> None:
+    key = _norm(alias)
+    if key and key not in _ALIAS_INDEX:          # birinchi kelgani ustun
+        _ALIAS_INDEX[key] = name
+
+
+def _load_file() -> list[tuple[str, str]]:
+    """GeoNames dan yig'ilgan kengaytirilgan lug'at (`cities.tsv`).
+
+    Kuratorlik qilingan `_RAW` ustun: u yerdagi nom, koordinata va aliaslar
+    o'zgarmaydi, fayldan faqat qo'shimcha nomlar qo'shiladi. Fayl bo'lmasa
+    ham tizim ishlaydi (faqat `_RAW`).
+    """
+    from pathlib import Path
+    path = Path(__file__).parent / CITIES_FILE
+    fuzzy: list[tuple[str, str]] = []
+    if not path.exists():
+        return fuzzy
+    regions = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line or line.startswith("#"):
+            continue
+        kind, name, lat, lon, country, pop, ru_name, aliases = line.split("\t")
+        aliases_list = [a for a in aliases.split("|") if a]
+        if kind == "alias":
+            regions.append((name, aliases_list))
+            continue
+        if name not in CITIES:
+            CITIES[name] = City(name, float(lat), float(lon), country)
+            RU[name] = ru_name or name
+            _add_alias(name, name)
+        if int(pop or 0) >= MAJOR_MIN_POP:
+            MAJOR.add(name)
+        big = int(pop or 0) >= FUZZY_MIN_POP and CITIES[name].country in FUZZY_COUNTRIES
+        for a in aliases_list:
+            _add_alias(a, name)
+            if big and len(a) >= 5:
+                fuzzy.append((_norm(a), name))
+    # Viloyat nomlari ("Qashqadaryo viloyati" -> Qarshi) — shaharlardan keyin:
+    # shahar nomi viloyat nomidan ustun turadi
+    for name, aliases_list in regions:
+        if name in CITIES:
+            for a in aliases_list:
+                _add_alias(a, name)
+    return fuzzy
+
+
 def _build():
+    fuzzy = []
     for name, lat, lon, country, aliases in _RAW:
         city = City(name, lat, lon, country)
         CITIES[name] = city
         RU[name] = _RU_FIX.get(name) or _ru_title(aliases.split("|")[0])
         for a in [name, *aliases.split("|")]:
             _ALIAS_INDEX[_norm(a)] = name
+            fuzzy.append((_norm(a), name))
+    for name, aliases in _EXTRA_ALIASES.items():
+        for a in aliases.split("|"):
+            _add_alias(a, name)
+    fuzzy += _load_file()
+    for alias, name in fuzzy:
+        # faqat lug'atda shu nomga ishora qilgan aliaslar (to'qnashuvda yutqazgan emas)
+        if len(alias) >= 3 and _ALIAS_INDEX.get(alias) == name:
+            _FUZZY.setdefault(len(alias), []).append(alias)
+    for length in _FUZZY:
+        _FUZZY[length] = sorted(set(_FUZZY[length]))
+    for code, aliases in _COUNTRY_RAW.items():
+        for a in aliases.split("|"):
+            COUNTRY_INDEX[_norm(a)] = code
 
 
 _build()
+
+
+def country_of_word(word: str) -> str | None:
+    """So'z davlat nomimi: "Россия", "Rossiyadan", "Италии" -> "RU"/"IT"."""
+    t = _norm(word)
+    if t in COUNTRY_INDEX:
+        return COUNTRY_INDEX[t]
+    for v in _case_variants(t):
+        if v in COUNTRY_INDEX:
+            return COUNTRY_INDEX[v]
+    return None
 
 
 def ru(name) -> str:
@@ -237,12 +412,20 @@ def _case_variants(t: str) -> list[str]:
         out += [t[:-1] + "а", t[:-1] + "ь", t[:-1]]
     if len(t) >= 5 and t[-1] == "а":
         out.append(t[:-1])
+    if len(t) >= 5 and t[-1] in "июе":          # России, Италию, Анталии -> -ия
+        out.append(t[:-1] + "я")
     return out
 
 
 def lookup(token: str, threshold: float = 0.87) -> str | None:
     """Bitta so'z/ibora bo'yicha shaharni topadi (aniq, keyin taxminiy)."""
-    t = _norm(token)
+    return _lookup(_norm(token), threshold)
+
+
+@functools.lru_cache(maxsize=200_000)
+def _lookup(t: str, threshold: float) -> str | None:
+    # Kesh: guruhlardan kuniga 100 mingdan ortiq xabar keladi, so'zlar takrorlanadi —
+    # 3 000 shaharli lug'atda har so'z uchun taxminiy qidiruv qimmat.
     if not t or t in _STOPWORDS or len(t) < 2:
         return None
     if t in _ALIAS_INDEX:
@@ -252,16 +435,13 @@ def lookup(token: str, threshold: float = 0.87) -> str | None:
     for v in _case_variants(t):
         if v in _ALIAS_INDEX and v not in _STOPWORDS:
             return _ALIAS_INDEX[v]
-    if len(t) < 4:  # qisqa so'zlarni faqat aniq moslikda olamiz
+    if len(t) < 4 or any(ch.isdigit() for ch in t):  # qisqa so'z — faqat aniq moslik
         return None
-    best, best_score = None, 0.0
-    for alias, canon in _ALIAS_INDEX.items():
-        if abs(len(alias) - len(t)) > 3:
-            continue
-        r = _ratio(t, alias)
-        if r > best_score:
-            best, best_score = canon, r
-    return best if best_score >= threshold else None
+    pool = [a for n in range(len(t) - 3, len(t) + 4) for a in _FUZZY.get(n, ())]
+    best = _best_match(t, pool)
+    if best is None or best[1] < threshold:
+        return None
+    return _ALIAS_INDEX[best[0]]
 
 
 def find_cities(text: str, max_ngram: int = 3) -> list[tuple[int, str]]:
@@ -294,6 +474,32 @@ def find_cities(text: str, max_ngram: int = 3) -> list[tuple[int, str]]:
                     found.append((i, city))
         i += 1
     return found
+
+
+def cities_near(name: str | None, km: float) -> set[str]:
+    """Shahar va uning atrofi (filtr: "Москва" = Москва + Подольск + Химки…)."""
+    center = CITIES.get(name or "")
+    if center is None:
+        return set()
+    if km <= 0:
+        return {center.name}
+    return {n for n, c in CITIES.items()
+            if abs(c.lat - center.lat) < km / 80 and haversine_km(center, c) <= km}
+
+
+def cities_in_country(code: str | None) -> set[str]:
+    return {n for n, c in CITIES.items() if c.country == code}
+
+
+def resolve_place(text: str | None) -> tuple[str, str] | None:
+    """Filtr maydoni: shahar yoki davlat. ("city", "Moskva") | ("country", "RU") | None."""
+    if not text or not text.strip():
+        return None
+    city = lookup(text)
+    if city:
+        return "city", city
+    code = country_of_word(text)
+    return ("country", code) if code else None
 
 
 def haversine_km(a: City, b: City) -> float:

@@ -413,21 +413,27 @@ def format_search(found: dict) -> str:
         lines.append("\nМогу сообщить, как только появится — нажмите кнопку ниже.")
         return "\n".join(lines)
 
-    lines = [f"🔍 <b>{escape(query.describe())}</b> — найдено "
-             f"{len(results)} из {found['scanned']} (по {found['trucks']} машинам):"]
+    scanned, fit = found["scanned"], found.get("fit", len(results))
+    head = f"🔍 <b>{escape(query.describe())}</b> — грузов: <b>{scanned}</b>"
+    if found["trucks"]:
+        head += f", подходят нашим фурам: {fit}"
+    lines = [head + (f" (показаны {len(results)})" if scanned > len(results) else "") + ":"]
     for i, r in enumerate(results, 1):
         c = r["cargo"]
         body = _BODY_NAME.get(c.get("body_type"), c.get("body_type") or "—")
         temp = f" {c['temp_c']:+.0f}°" if c.get("temp_c") is not None else ""
         weight = f"{c['weight_t']:g} т" if c.get("weight_t") else "вес не указан"
         price = price_text(c)
+        if r.get("truck_id"):
+            fleet = (f"\n   🚛 №{escape(r['truck_id'])} · пустой {r['empty_km']:.0f} км · "
+                     f"{r['trip_days']} дн.\n   💰 маржа {money(r['margin_usd'])}")
+        else:
+            fleet = "\n   🚛 наши фуры сейчас далеко или не подходят"
         lines.append(
             f"\n{i}. <b>{escape(c['from_city'])} → {escape(c['to_city'])}</b>"
             + (f" · 💵 <b>{escape(price)}</b>" if price else " · цена не указана")
             + f"\n   {body}{temp} · {weight} · {escape(c.get('load_date') or 'дата не указана')}"
-            f"\n   🚛 №{escape(r['truck_id'])} · пустой {r['empty_km']:.0f} км · "
-            f"{r['trip_days']} дн."
-            f"\n   💰 маржа {money(r['margin_usd'])}"
+            + fleet
             + (f"\n   📞 {escape(c['phone'])}" if c.get("phone") else "")
             + f"\n   /cargo_{c['id']}")
     return "\n".join(lines)

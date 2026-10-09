@@ -133,6 +133,18 @@ CREATE TABLE IF NOT EXISTS sources (
     updated_at  TEXT
 );
 
+-- Guruhdan kelgan oqim hisobi (kun bo'yicha): nechta xabar, nechtasi yangi yuk,
+-- nechtasi qayta joylangan, nechtasi yuk emas. Panelda "Группы" sahifasi.
+CREATE TABLE IF NOT EXISTS ingest_stats (
+    day         TEXT,                   -- UTC sana
+    source      TEXT,
+    messages    INTEGER DEFAULT 0,
+    saved       INTEGER DEFAULT 0,
+    dup         INTEGER DEFAULT 0,
+    skipped     INTEGER DEFAULT 0,
+    PRIMARY KEY (day, source)
+);
+
 -- Akkaunt a'zo bo'lgan guruhlar (panelda "bir bosishda kuzatish" uchun)
 CREATE TABLE IF NOT EXISTS tg_dialogs (
     chat_id     TEXT PRIMARY KEY,
@@ -198,7 +210,13 @@ BUSY_TIMEOUT_SEC = 15
 def connect() -> sqlite3.Connection:
     conn = sqlite3.connect(config.DB_PATH, timeout=BUSY_TIMEOUT_SEC, factory=_Conn)
     conn.row_factory = sqlite3.Row
+    # SQLite'ning lower() faqat lotinni kichraytiradi — kirill qidiruvi uchun
+    conn.create_function("ulower", 1, _ulower, deterministic=True)
     return conn
+
+
+def _ulower(value):
+    return value.lower() if isinstance(value, str) else value
 
 
 def init() -> None:
@@ -221,6 +239,18 @@ def _migrate(conn: sqlite3.Connection) -> None:
             "pos_updated_at": "TEXT",      # holat oxirgi marta qachon yangilandi
             "tg_user_id": "INTEGER",       # haydovchining Telegram id'si (Live Location)
         },
+        "cargos": {
+            # E'lon oxirgi marta qachon ko'rildi. Guruhlarda bir e'lon har kuni
+            # qayta joylanadi — dubl yangi yozuv bo'lmaydi, lekin asl yuk shu
+            # bilan "tirik" qoladi (aks holda 24 soatda eskirib, ro'yxatdan
+            # yo'qolardi). Vaqt oynalari shu ustun bo'yicha (`_SEEN`).
+            "seen_at": "TEXT",
+        },
+        "sources": {
+            # Listener shu raqamgacha o'qigan: qayta ishga tushganda yoki Telegram
+            # yangilanishni yetkazmasa — shu yerdan davom etadi (listener._poll)
+            "last_msg_id": "INTEGER",
+        },
         "matches": {
             "actual_margin_usd": "REAL",   # reys tugagandagi haqiqiy marja
             "decided_at": "TEXT",
@@ -239,34 +269,72 @@ def _migrate(conn: sqlite3.Connection) -> None:
 
 # ---------------------------------------------------------------- cargos
 
-def insert_cargo(cargo, fingerprint: str) -> int | None:
-    """Yangi yukni yozadi. Dubl bo'lsa None qaytaradi."""
-    rate_usd = config.to_usd(cargo.rate, cargo.currency)
-    with connect() as conn:
-        try:
-            cur = conn.execute(
-                """INSERT INTO cargos (fingerprint, from_city, to_city, via, load_date,
+# E'lon oxirgi marta ko'rilgan vaqt: seen_at faqat qayta joylanganda yoziladi,
+# bo'lmasa — yaratilgan vaqt
+_SEEN = "COALESCE(seen_at, created_at)"
+
+_INSERT_CARGO = """INSERT INTO cargos (fingerprint, from_city, to_city, via, load_date,
                    weight_t, body_type, temp_c, rate, currency, rate_usd, phone, username,
                    source, source_msg_id, posted_at, confidence, raw_text)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (fingerprint, cargo.from_city, cargo.to_city, json.dumps(cargo.via),
-                 cargo.load_date.isoformat() if cargo.load_date else None,
-                 cargo.weight_t, cargo.body_type, cargo.temp_c, cargo.rate,
-                 cargo.currency, rate_usd, cargo.phone, cargo.username,
-                 cargo.source, cargo.source_msg_id,
-                 cargo.posted_at.isoformat() if cargo.posted_at else None,
-                 cargo.confidence, cargo.raw_text),
-            )
-            return cur.lastrowid
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""
+
+
+def insert_cargo(cargo, fingerprint: str, dup_window_hours: float = 36) -> int | None:
+    """Yangi yukni yozadi. Oyna ichidagi dubl bo'lsa None.
+
+    `fingerprint` ustuni UNIQUE, lekin dubl faqat oyna ichida (`dedup`).
+    Oynadan tashqaridagi eski yuk bilan to'qnashuv — bu YANGI yuk
+    (ekspeditor har hafta "Москва → Ташкент, реф 22 т" ni sanasiz tashlaydi).
+    Ilgari bunday yuk jimgina tashlanardi: audit (2026-10-08) — 2 soatda
+    ~2 000 ta e'lon. Endi eski yozuvning barmoq izi arxivlanadi.
+    """
+    rate_usd = config.to_usd(cargo.rate, cargo.currency)
+    values = (fingerprint, cargo.from_city, cargo.to_city, json.dumps(cargo.via),
+              cargo.load_date.isoformat() if cargo.load_date else None,
+              cargo.weight_t, cargo.body_type, cargo.temp_c, cargo.rate,
+              cargo.currency, rate_usd, cargo.phone, cargo.username,
+              cargo.source, cargo.source_msg_id,
+              cargo.posted_at.isoformat() if cargo.posted_at else None,
+              cargo.confidence, cargo.raw_text)
+    with connect() as conn:
+        try:
+            return conn.execute(_INSERT_CARGO, values).lastrowid
         except sqlite3.IntegrityError:
-            return None
+            cur = conn.execute(f"UPDATE cargos SET fingerprint = fingerprint || '@' || id"
+                               f" WHERE fingerprint=? AND {_SEEN} < ?",
+                               (fingerprint, _ago(hours=dup_window_hours)))
+            if not cur.rowcount:
+                return None                     # yangi dubl — yozilmaydi
+            try:
+                return conn.execute(_INSERT_CARGO, values).lastrowid
+            except sqlite3.IntegrityError:
+                return None
+
+
+def touch_cargo(cargo_id: int, when: datetime | None = None, active_hours: float = 24) -> None:
+    """E'lon yana chiqdi (dubl) — yuk tirik. `when` — e'lon vaqti (Telegram).
+
+    Yosh bo'yicha eskirgan bo'lsa va e'lon yangi bo'lsa — qaytadan faol.
+    Olingan/rad etilganiga tegilmaydi.
+    """
+    if when is None:
+        seen = _ago()
+    else:
+        if when.tzinfo is not None:
+            when = when.astimezone(timezone.utc).replace(tzinfo=None)
+        seen = min(when, utc_now()).isoformat(" ", "seconds")
+    with connect() as conn:
+        conn.execute(
+            f"UPDATE cargos SET seen_at=MAX({_SEEN}, ?),"
+            " status=CASE WHEN status='expired' AND ? >= ? THEN 'new' ELSE status END"
+            " WHERE id=?", (seen, seen, _ago(hours=active_hours), cargo_id))
 
 
 def recent_cargos(hours: int = 48) -> list[sqlite3.Row]:
     since = _ago(hours=hours)
     with connect() as conn:
         return conn.execute(
-            "SELECT * FROM cargos WHERE created_at >= ? ORDER BY id DESC", (since,)
+            f"SELECT * FROM cargos WHERE {_SEEN} >= ? ORDER BY id DESC", (since,)
         ).fetchall()
 
 
@@ -274,7 +342,7 @@ def active_cargos(hours: int = 24) -> list[sqlite3.Row]:
     since = _ago(hours=hours)
     with connect() as conn:
         return conn.execute(
-            "SELECT * FROM cargos WHERE status='new' AND created_at >= ? ORDER BY id DESC",
+            f"SELECT * FROM cargos WHERE status='new' AND {_SEEN} >= ? ORDER BY id DESC",
             (since,),
         ).fetchall()
 
@@ -311,7 +379,7 @@ def expire_old_cargos(hours: int = 24) -> int:
     until = _ago(hours=hours)
     with connect() as conn:
         cur = conn.execute(
-            "UPDATE cargos SET status='expired' WHERE status='new' AND created_at < ?",
+            f"UPDATE cargos SET status='expired' WHERE status='new' AND {_SEEN} < ?",
             (until,))
         return cur.rowcount
 
@@ -564,29 +632,57 @@ def cancel_other_matches(cargo_id: int, keep_match_id: int) -> int:
 
 # ---------------------------------------------------------------- panel
 
+_ORDERS = {
+    "new": "COALESCE(c.seen_at, c.created_at) DESC, c.id DESC",
+    "price": "c.rate_usd IS NULL, c.rate_usd DESC, c.id DESC",
+    "score": "best_score IS NULL, best_score DESC, c.id DESC",
+}
+
+
+def _in(column: str, values, where: list, params: list) -> None:
+    where.append(f"{column} IN ({','.join('?' * len(values))})" if values else "0")
+    params.extend(values)
+
+
 def search_cargos(from_city: str | None = None, to_city: str | None = None,
                   body_type: str | None = None, status: str | None = None,
                   min_score: float | None = None, q: str | None = None,
-                  hours: int | None = None, limit: int = 200) -> list[sqlite3.Row]:
-    """Yuklar jadvali uchun filtrlangan ro'yxat (eng yaxshi ball bilan)."""
+                  hours: int | None = None, limit: int = 200,
+                  from_cities=None, to_cities=None, with_price: bool = False,
+                  order: str = "new") -> list[sqlite3.Row]:
+    """Yuklar ro'yxati filtr bilan (eng yaxshi ball bilan).
+
+    `from_cities`/`to_cities` — shaharlar to'plami (davlat yoki radius
+    bo'yicha filtr: "Москва" = Москва + Подольск + Химки…). `q` — matn
+    ichida, katta-kichik harfga qaramaydi (SQLite LIKE kirillni farqlaydi).
+    """
     where, params = ["1=1"], []
     if from_city:
         where.append("c.from_city = ?")
         params.append(from_city)
+    elif from_cities is not None:
+        _in("c.from_city", list(from_cities), where, params)
     if to_city:
         where.append("c.to_city = ?")
         params.append(to_city)
-    if body_type:
+    elif to_cities is not None:
+        _in("c.to_city", list(to_cities), where, params)
+    if body_type == "ref":
+        where.append("(c.body_type = 'ref' OR c.temp_c IS NOT NULL)")
+    elif body_type:
         where.append("c.body_type = ?")
         params.append(body_type)
     if status:
         where.append("c.status = ?")
         params.append(status)
     if q:
-        where.append("c.raw_text LIKE ?")
-        params.append(f"%{q}%")
+        where.append("ulower(c.raw_text) LIKE ? ESCAPE '\\'")
+        esc = q.lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        params.append(f"%{esc}%")
+    if with_price:
+        where.append("c.rate_usd IS NOT NULL")
     if hours:
-        where.append("c.created_at >= ?")
+        where.append("COALESCE(c.seen_at, c.created_at) >= ?")
         params.append(_ago(hours=hours))
 
     sql = f"""SELECT c.*, MAX(m.score) AS best_score, COUNT(m.id) AS match_count
@@ -596,7 +692,7 @@ def search_cargos(from_city: str | None = None, to_city: str | None = None,
     if min_score is not None:
         sql += " HAVING best_score >= ?"
         params.append(min_score)
-    sql += " ORDER BY c.id DESC LIMIT ?"
+    sql += f" ORDER BY {_ORDERS.get(order, _ORDERS['new'])} LIMIT ?"
     params.append(limit)
     with connect() as conn:
         return conn.execute(sql, params).fetchall()
@@ -627,7 +723,7 @@ def counters() -> dict:
         row = conn.execute(
             """SELECT
                  (SELECT COUNT(*) FROM cargos WHERE status='new'
-                    AND created_at >= ?) AS active,
+                    AND COALESCE(seen_at, created_at) >= ?) AS active,
                  (SELECT COUNT(*) FROM cargos WHERE created_at >= ?) AS today,
                  (SELECT COUNT(*) FROM matches WHERE notified=1
                     AND created_at >= ?) AS notified_today,

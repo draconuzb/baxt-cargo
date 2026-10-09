@@ -188,9 +188,11 @@ def now_msg(i, text):
 
 @pytest.fixture
 def fresh_watch():
-    listener.WATCH.clear()
+    for state in (listener.WATCH, listener.LAST_ID, listener._SEEN, listener._ENTITIES):
+        state.clear()
     yield listener.WATCH
-    listener.WATCH.clear()
+    for state in (listener.WATCH, listener.LAST_ID, listener._SEEN, listener._ENTITIES):
+        state.clear()
 
 
 def test_sync_joins_public_group_and_reads_recent(clean_db, fresh_watch, monkeypatch):
@@ -258,3 +260,82 @@ def test_refresh_dialogs_keeps_only_groups(clean_db):
                SimpleNamespace(is_group=False, is_channel=True, entity=chan(-22, None, "B"))]
     assert asyncio.run(listener.refresh_dialogs(FakeTG(dialogs=dialogs))) == 2
     assert {d["title"] for d in sources.dialogs()} == {"A", "B"}
+
+
+# ---------------------------------------------------------------- tutib olish (poll)
+
+class FakePoll:
+    """iter_messages(reverse, offset_date, min_id) ni Telegram kabi bajaradi."""
+
+    def __init__(self, entities, messages):
+        self.entities, self.messages, self.calls = entities, messages, []
+
+    async def get_entity(self, key):
+        return self.entities[key]
+
+    async def iter_messages(self, entity, reverse=False, offset_date=None, min_id=0, limit=100):
+        self.calls.append(min_id)
+        out = [m for m in sorted(self.messages.get(entity.id, []), key=lambda m: m.id)
+               if m.id > min_id and (offset_date is None or m.date >= offset_date)]
+        for m in out[:limit]:
+            yield m
+
+
+def at(i, text, minutes_ago=0):
+    from datetime import timedelta
+    return SimpleNamespace(id=i, message=text,
+                           date=datetime.now(timezone.utc) - timedelta(minutes=minutes_ago))
+
+
+def test_poll_catches_message_the_event_missed(clean_db, fresh_watch, monkeypatch):
+    """Hodisa 5-xabarni oldi, 4-ni Telegram yetkazmadi — so'rov 4-ni topadi, 5-ni qaytarmaydi."""
+    monkeypatch.setattr("notifier.send", lambda *a, **k: None)
+    g = chan(-1005, "yuklar")
+    m4 = at(4, "Есть груз Ташкент → Москва, 20т тент, 4000$")
+    m5 = at(5, "Есть груз Бухара → Казань, 20т тент, 4100$")
+    fresh_watch.add(-1005)
+    asyncio.run(listener._process(-1005, m5, "yuklar"))         # hodisa
+    fake = FakePoll({-1005: g}, {-1005: [m4, m5]})
+    assert asyncio.run(listener.poll_once(fake)) == 1
+    with clean_db.connect() as conn:
+        routes = sorted((r["from_city"], r["to_city"]) for r in
+                        conn.execute("SELECT from_city, to_city FROM cargos"))
+    assert routes == [("Buxoro", "Qozon"), ("Toshkent", "Moskva")]
+    assert listener.LAST_ID[-1005] == 5
+    assert asyncio.run(listener.poll_once(fake)) == 0              # takror ishlanmaydi
+    assert fake.calls[-1] == 5
+
+
+def test_poll_old_message_does_not_notify(clean_db, fresh_watch, monkeypatch):
+    """Qayta ishga tushgandan keyin tutib olingan eski e'lon — kartochkasiz."""
+    seen = []
+    monkeypatch.setattr(listener.pipeline, "handle_message",
+                        lambda text, src, mid, date, notify=True: seen.append(notify) or [])
+    fresh_watch.add(-1006)
+    fake = FakePoll({-1006: chan(-1006, "g")},
+                    {-1006: [at(1, "Есть груз Ташкент → Москва, 20т", minutes_ago=120),
+                             at(2, "Есть груз Бухара → Казань, 20т", minutes_ago=1)]})
+    asyncio.run(listener.poll_once(fake))
+    assert seen == [False, True]
+
+
+def test_poll_resumes_from_saved_position(clean_db, fresh_watch):
+    """Qayta ishga tushganda oxirgi o'qilgan raqam bazadan olinadi."""
+    sid, _ = sources.add("-1001000000007")
+    sources.set_active(sid, -1001000000007, "G", None)
+    sources.save_last_ids({-1001000000007: 120})
+    assert sources.last_ids() == {-1001000000007: 120}
+    sources.save_last_ids({-1001000000007: 100})               # orqaga qaytmaydi
+    assert sources.last_ids() == {-1001000000007: 120}
+
+
+def test_ingest_stats_are_flushed(clean_db, fresh_watch, monkeypatch):
+    """Guruh bo'yicha hisob: xabar, yangi yuk, takror, yuk emas."""
+    monkeypatch.setattr("notifier.send", lambda *a, **k: None)
+    listener.pipeline.take_stats()
+    fresh_watch.add(-1008)
+    text = "Есть груз Ташкент → Москва, 20т тент, 4000$"
+    for i, t in enumerate([text, text + " срочно!", "Привет всем, как дела у вас?", "ок"], 1):
+        asyncio.run(listener._process(-1008, at(i, t), "grp"))
+    sources.flush_stats(listener.pipeline.take_stats())
+    assert sources.ingest_stats()["grp"] == {"messages": 4, "saved": 1, "dup": 1, "skipped": 2}

@@ -152,11 +152,15 @@ def _candidates(from_city=None, to_city=None, from_country=None, to_country=None
     rows = [_row(r) for r in db.active_cargos(hours=hours)]
     center = geo.CITIES.get(near_city) if near_city else None
     radius = float(radius_km or NEAR_RADIUS_KM)
+    # "Москва" — Подольск, Балашиха ham (search.NEAR_KM, bot va panel bilan bir xil)
+    import search
+    from_set = geo.cities_near(from_city, search.NEAR_KM) if from_city else None
+    to_set = geo.cities_near(to_city, search.NEAR_KM) if to_city else None
     out = []
     for c in rows:
-        if from_city and c["from_city"] != from_city:
+        if from_set is not None and c["from_city"] not in from_set:
             continue
-        if to_city and c["to_city"] != to_city:
+        if to_set is not None and c["to_city"] not in to_set:
             continue
         if from_country and rules.city_country(c["from_city"]) != from_country:
             continue
@@ -264,6 +268,17 @@ def find_cargo(ctx: Ctx, truck_id=None, near_city=None, radius_km=None,
             found.append({"cargo": c, "result": best})
 
     found.sort(key=_rank_key, reverse=True)
+    route_asked = bool(fc or tc or fco or tco)
+    if not found and route_asked and cargos:
+        # Yo'nalishda yuk bor, lekin furalarimiz uzoq/mos emas — baribir ko'rsatamiz:
+        # aks holda model boshqa yo'nalishlarni taklif qilib yuborardi (2026-10-08,
+        # "Грозный → Самарканд" so'ralganda "Ташкент → Алматы" chiqqan)
+        market = sorted(cargos, key=lambda c: (c.get("rate_usd") is None,
+                                               -(c.get("rate_usd") or 0)))[:top]
+        return {"results": [{**_cargo_brief(c), "fleet_fit": False} for c in market],
+                "scanned": len(cargos), "fit": 0, "blocked_by_rules": blocked,
+                "trucks_considered": len(trucks),
+                "note": "cargo exists on this route, but none of our trucks is near or fits"}
     items = []
     for f in found[:top]:
         c, r = f["cargo"], f["result"]
