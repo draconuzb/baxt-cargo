@@ -265,6 +265,24 @@ def _migrate(conn: sqlite3.Connection) -> None:
         for name, coltype in columns.items():
             if name not in have:
                 conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {coltype}")
+    _rename_cities(conn)
+
+
+def _rename_cities(conn: sqlite3.Connection) -> None:
+    """Lug'atda kanonik nomi o'zgargan shaharlar (`geo.RENAMED`) — eski yozuvlarda ham."""
+    import geo
+    old = list(geo.RENAMED)
+    if not old:
+        return
+    marks = ",".join("?" * len(old))
+    if conn.execute(f"SELECT 1 FROM cargos WHERE from_city IN ({marks}) OR to_city IN ({marks})"
+                    f" LIMIT 1", old + old).fetchone() is None:
+        return
+    for a, b in geo.RENAMED.items():
+        for table, col in (("cargos", "from_city"), ("cargos", "to_city"),
+                           ("trucks", "current_city"), ("watches", "from_city"),
+                           ("watches", "to_city")):
+            conn.execute(f"UPDATE {table} SET {col}=? WHERE {col}=?", (b, a))
 
 
 # ---------------------------------------------------------------- cargos

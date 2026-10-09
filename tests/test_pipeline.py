@@ -208,3 +208,26 @@ def test_rescore_open_updates_and_cancels(park, sent):
         conn.execute("UPDATE cargos SET to_city='Toshkent' WHERE id=?", (cid,))
     pipeline.rescore_open(hours=72)
     assert park.get_match(m["id"])["decision"] == "cancelled"
+
+
+# ---------------------------------------------------------------- kartochka siyosati (audit 2026-10-09)
+
+def test_one_card_per_cargo(park, sent):
+    """Ikkala fura ham mos — kartochka bitta (eng yaxshisi), moslik ikkalasiga yoziladi."""
+    ids = pipeline.handle_message("Есть груз Ташкент → Москва, 20т тент, 4000$, 22.09")
+    with park.connect() as conn:
+        assert conn.execute("SELECT COUNT(*) FROM matches WHERE cargo_id=?",
+                            (ids[0],)).fetchone()[0] == 2
+    assert len(sent) == 1
+
+
+def test_unpriced_cargo_gets_no_card(park, sent):
+    """Narxsiz yuk ham yuqori ball oladi, lekin kartochka emas — panel/qidiruvda ko'rinadi."""
+    ids = pipeline.handle_message("Есть груз Ташкент → Москва, 20т тент, 22.09")
+    assert ids and sent == []
+
+
+def test_watched_route_is_notified_even_without_price(park, sent):
+    park.add_watch("Toshkent", "Moskva", None, query="ташкент москва")
+    pipeline.handle_message("Есть груз Ташкент → Москва, 20т тент, 22.09")
+    assert len(sent) == 1 and "По вашему запросу" in sent[0]["text"]

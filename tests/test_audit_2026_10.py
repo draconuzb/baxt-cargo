@@ -169,3 +169,44 @@ def test_ai_route_search_shows_market_when_no_truck_fits(clean_db, quiet):
     out = ai_tools.find_cargo(ai_tools.Ctx(), from_city="Грозный", to_city="Самарканд")
     assert [r["route"] for r in out["results"]] == ["Grozny -> Samarqand"]
     assert out["results"][0]["fleet_fit"] is False and out["fit"] == 0
+
+
+# ---------------------------------------------------------------- to'liq audit (2026-10-09, 2-qism)
+
+@pytest.mark.parametrize("text", ["Самарканд → Екатеринбург\nСухофрукты 23.5 тонна\nреф",
+                                  "Zomin - Andijon piyoz 15.5 tona kerak",
+                                  "Ташкент - Москва 20.5т тент, 1.500.000 сум"])
+def test_weight_is_not_a_date(text):
+    """"23.5 тонна" 23-may bo'lib qolardi."""
+    assert parser.parse_many(text)[0].load_date is None
+
+
+def test_real_dates_still_parsed():
+    from datetime import date
+    assert parser._parse_date("погрузка 12.10", date(2026, 10, 9)) == date(2026, 10, 12)
+    assert parser._parse_date("4000$, 22.09, тел", date(2026, 9, 20)) == date(2026, 9, 22)
+
+
+def test_same_city_route_is_not_usable():
+    c = parser.parse("Есть груз Ташкент, 20т тент, 4000$")
+    c.to_city = c.from_city                      # LLM shunday to'ldirishi mumkin
+    assert not parser.is_usable(c)
+
+
+@pytest.mark.parametrize("word", ["хамма", "ham", "резина", "куба", "juma", "chelak",
+                                  "nishon", "туркменистан", "булган"])
+def test_uzbek_words_are_not_cities(word):
+    assert geo.lookup(word) is None
+
+
+def test_bare_uzbek_town_names():
+    assert geo.lookup("urgut") == "Urgut" and geo.lookup("g'ijduvon") == "G'ijduvon"
+    assert geo.lookup("кашкадарьинская") == "Qarshi"
+
+
+def test_renamed_cities_migrate(clean_db):
+    with clean_db.connect() as conn:
+        conn.execute("INSERT INTO cargos (from_city, to_city, raw_text) VALUES"
+                     " ('Urgut Shahri', 'Moskva', 'x')")
+        db._migrate(conn)
+        assert conn.execute("SELECT from_city FROM cargos").fetchone()[0] == "Urgut"

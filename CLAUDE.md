@@ -233,3 +233,17 @@ Har qanday o'zgartirishdan keyin `python main.py demo` va `pytest` ishlashi shar
 37. **Tasnif**: platformalar e'lon ostiga reklama qo'shadi ("Sizda ham yuk yoki bo'sh
     mashina bormi?") — bu qatorlar tasnifdan oldin olib tashlanadi (`_RE_PROMO_LINE`),
     aks holda yuk e'loni "bo'sh mashina" bo'lib tashlanardi.
+38. **Telegram kartochkasi** (to'liq audit 2026-10-09: haftada 1 349 ta kartochka, 74%
+    narxsiz, bittasi ham olinmagan): kartochka faqat narxi bor, shubhali bo'lmagan va
+    kunlik marjasi > 0 yukka (`pipeline.worth_card`), bitta yukka bitta (eng yaxshi
+    fura). Dispetcher kuzatayotgan yo'nalish — narxsiz ham keladi. Narxsiz yuk panel,
+    qidiruv va /list da ko'rinadi.
+39. **Lug'at sifati**: kunlik matnda shaharga aylanayotgan so'zlarni tekshirish —
+    oxirgi sutka `raw_text` bo'yicha kuratorliksiz topilmalar soni (audit usuli
+    `baxt-ingest-audit` xotirasida). Oddiy so'z ("ham", "куба", "juma", "chelak") —
+    `deploy/build_cities.py` BLACKLIST, qayta yig'ish, `test_uzbek_words_are_not_cities`.
+    Kanonik nom o'zgarsa — `geo.RENAMED` (bazadagi eski yozuvlar `db._migrate` da).
+    Sana: "23.5 тонна" sana emas (`_RE_DATE_NUM` birlik oldidan to'xtaydi).
+    LLM faqat yukka o'xshagan matnga (shahar yoki vazn+narx) — kunlik 300 limit spamga ketardi.
+40. **Nazoratchi** listener yurak urishini (5 daqiqa) va kunlik zaxirani (30 soat,
+    `backups/`, cron `deploy/backup.sh`) ham tekshiradi.

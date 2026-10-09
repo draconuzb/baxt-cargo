@@ -59,3 +59,24 @@ def test_services_and_code_checks(monkeypatch):
     assert "web.py, bot.py" in watchdog.check_code()["code"]
     monkeypatch.setattr(watchdog, "_run", lambda cmd: (0, ""))
     assert watchdog.check_code() == {}
+
+
+def test_listener_heartbeat_check(clean_db):
+    import sources
+    assert watchdog.check_listener() == {}                     # hali hech qachon
+    clean_db.set_setting(sources.HEARTBEAT_KEY, clean_db._ago(hours=1))
+    assert "listener" in watchdog.check_listener()
+    sources.heartbeat()
+    assert watchdog.check_listener() == {}
+
+
+def test_backup_age_check(tmp_path):
+    import os
+    import time
+    assert watchdog.check_backup(str(tmp_path)) == {}           # zaxira sozlanmagan
+    f = tmp_path / "cargo-20261001-0300.db.gz"
+    f.write_bytes(b"x")
+    assert watchdog.check_backup(str(tmp_path)) == {}
+    old = time.time() - 3 * 24 * 3600
+    os.utime(f, (old, old))
+    assert "backup" in watchdog.check_backup(str(tmp_path))

@@ -181,6 +181,39 @@ _EXTRA_ALIASES = {
     "Ashxabad": "ashxobod|ашхобод|ashgabad",
     "Krasnodar": "krosnadar|кроснадар|korsnador|krasnador|краснадар|кроснодар",
     "Bishkek": "bishkent|бишкент",
+    # Viloyatlar: GeoNames yozuvida yo'q shakllari
+    "Qarshi": "кашкадарьинская|кашкадарья|qashqadaryo vil",
+    "Jizzax": "джизакская|jizzax viloyati|jizzax vil",
+    "Nukus": "каракалпакия|каракалпакстан|qoraqalpog'iston|qaraqalpoq|qoraqalpoq",
+    "Ufa": "башкирия|bashkiriya",
+}
+
+# Kanonik nom o'zgargan shaharlar (GeoNames nomidagi "Shahri" va h.k.) — bazadagi
+# eski yozuvlar `db._migrate` da yangisiga o'tkaziladi
+RENAMED = {
+    "Bulung'ur Shahri": "Bulung'ur",
+    "Do'stlik Shahri": "Do'stlik",
+    "G'allaorol Shahri": "G'allaorol",
+    "G'ijduvon Shahri": "G'ijduvon",
+    "G'oliblar Qishlog'i": "G'oliblar",
+    'Galaosiyo Shahri': 'Galaosiyo',
+    'Ishtixon Shahri': 'Ishtixon',
+    'Jomboy Shahri': 'Jomboy',
+    'Juma Shahri': 'Juma',
+    "Kattaqo'rg'on Shahri": "Kattaqo'rg'on",
+    'Kegeyli Shahar': 'Kegeyli',
+    'Kogon Shahri': 'Kogon',
+    'Nishon Tumani': 'Nishon',
+    'Olot Shahri': 'Olot',
+    'Paxtakor Shahri': 'Paxtakor',
+    'Payariq Shahri': 'Payariq',
+    'Romitan Shahri': 'Romitan',
+    'Shofirkon Shahri': 'Shofirkon',
+    'Uchqurghon Shahri': 'Uchqurghon',
+    'Urgut Shahri': 'Urgut',
+    'Vobkent Shahri': 'Vobkent',
+    "Xo'jayli Shahri": "Xo'jayli",
+    'Zomin Shaharchasi': 'Zomin',
 }
 
 # Faqat davlat yozilgan e'lon ("Италия — Ташкент", "Rossiya ➡️ Toshkent"):
@@ -320,9 +353,10 @@ def _load_file() -> list[tuple[str, str]]:
             regions.append((name, aliases_list))
             continue
         if name not in CITIES:
+            # Kanonik nom alias qilinmaydi: u aliaslar ro'yxatida bo'lsa — keladi,
+            # bo'lmasa u oddiy so'z ("Juma", "Chelak") va builder uni chiqarib tashlagan
             CITIES[name] = City(name, float(lat), float(lon), country)
             RU[name] = ru_name or name
-            _add_alias(name, name)
         if int(pop or 0) >= MAJOR_MIN_POP:
             MAJOR.add(name)
         big = int(pop or 0) >= FUZZY_MIN_POP and CITIES[name].country in FUZZY_COUNTRIES

@@ -150,7 +150,12 @@ _MONTHS = {
     "yan": 1, "fev": 2, "mart": 3, "apr": 4, "may": 5, "iyun": 6, "iyul": 7,
     "avg": 8, "sen": 9, "okt": 10, "noy": 11, "dek": 12,
 }
-_RE_DATE_NUM = re.compile(r"(?<!\d)(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?(?!\d)")
+# Sana "12.05", "12/05/2026". Keyin o'lchov birligi kelsa — bu son, sana emas:
+# "23.5 тонна" 23-may bo'lib qolardi (audit 2026-10-09: 12 soatda ~250 yuk)
+_RE_DATE_NUM = re.compile(
+    r"(?<!\d)(?<!\d[.,])(\d{1,2})[./](\d{1,2})(?:[./](\d{2,4}))?(?!\d|[.,]\d)"
+    r"(?!\s*(?:т\b|тн|тон|тонн|t\b|tn|ton|кг|kg|куб|м3|m3|м³|\$|usd|долл|млн|mln|%|"
+    r"тыс|минг|ming|сум|so'm|руб|km|км))")
 _RE_DATE_WORD = re.compile(r"(\d{1,2})\s*-?\s*(" + "|".join(_MONTHS) + r")\w*")
 
 _RE_PHONE = re.compile(r"\+?\d[\d\s\-()]{7,18}\d")
@@ -641,4 +646,6 @@ def _confidence(c: Cargo) -> float:
 
 def is_usable(c: Cargo) -> bool:
     """Bazaga yozishga arziydimi?"""
-    return c.kind == "cargo" and bool(c.from_city and c.to_city) and c.confidence >= 0.45
+    # from == to: LLM bo'sh tomonga o'sha shaharni qo'yishi mumkin ("Jizzax → Jizzax")
+    return (c.kind == "cargo" and bool(c.from_city and c.to_city)
+            and c.from_city != c.to_city and c.confidence >= 0.45)

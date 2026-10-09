@@ -251,7 +251,6 @@ city	Bengbu	32.9408	117.3608	CN	972784	Бэнбу	bangbu|bengbu|pang fou|pang fo
 city	Dnipro	48.4666	35.0407	UA	968502	Днепр	dnepr|dnipro|днепр|дніпро
 city	Feicheng	36.2486	116.7658	CN	968100	Фэйчэн	fei ch'eng hsien|fei-ch'eng-hsien|fei-cheng-hsien|feich'enghsien|feicheng|feychen|xincheng|фэйчэн
 city	Sanhe	39.9805	117.0689	CN	965075	Саньхэ	san ho|san ho hsien|san-ho|san-ho-ch'eng-kuan|san-ho-cheng-kuan|san-ho-hsien|sanhe|sanho|sanhoch'engkuan|sanhohsien|sunhohsien|саньхэ
-city	Guli	28.8816	120.0331	CN	964203	Гули	guli|yongkang|yung k'ang|yung k'ang hsien|yung-k'ang|yung-k'ang-hsien|yung-kang|yung-kang-hsien|yungk'ang|yungk'anghsien|гули
 city	Xiangtan	27.8500	112.9000	CN	959303	Сянтань	hsiang t'an ch'eng|hsiang t'an hsien|hsiang t'an shih|hsiang tan|hsiang-t'an-ch'eng|hsiang-t'an-hsien|hsiang-t'an-shih|hsiang-tan|hsiang-tan-cheng|hsiang-tan-hsien|hsiang-tan-shih|hsiangt'anch'eng|hsiangt'anhsien|hsiangt'anshih|hsiangtan|siangtan|siangtanhsien|xiangtan|сянтань
 city	Linfen	36.0889	111.5189	CN	959198	Линьфынь	lin fen hsien|lin-fen-hsien|linfen|linfen shi|linfenhsien|pingyang|pingyangfu|saratsi|yaodu qu|линьфынь|линьфэнь
 city	Zhenjiang	32.2109	119.4551	CN	950516	Чжэньцзян	chen chiang|chen chiang ch'eng|chen chiang hsien|chen chiang shih|chen-chiang|chen-chiang-ch'eng|chen-chiang-cheng|chen-chiang-hsien|chen-chiang-shih|chenchiang|chenchiangch'eng|chenchianghsien|chenchiangshih|chenkiang|chinkiang|chinkiang fu|chinking|tan t'a|tan t'u|tan-t'a|tan-t'u|tan-ta|tan-tu|tant'a|tant'u|tantuhsien|zhenjiang|zhenjiang shi|чжэньцзян
@@ -827,7 +826,6 @@ city	Edirne	41.6772	26.5560	TR	180002	Эдирне	adrianopel|adrianople|adriano
 city	Praga Poludnie	52.2442	21.0855	PL	179836	Прага-Полудне	praga poludnie|прага полудне|прага-полудне|прагаполудне
 city	Podolsk	55.4242	37.5547	RU	179400	Подольск	podolsk|подольск
 city	Jizzax	40.1335	67.8296	UZ	179200	Джизак	cizzak|cizzax|dishsak|dzhizak|jizak|jizzakh|jizzax|джизак|джиззак|жызак
-city	Hamm	51.6803	7.8209	DE	178967	Хамм	hamm|гамм|хам|хамм
 city	Nijmegen	51.8425	5.8528	NL	177359	Неймеген	nijmegen|nijmeyen|nimwegen|nymegen|наймеген|неймеген
 city	Uppsala	59.8588	17.6389	SE	177074	Уппсала	uppsala|уппсала|упсала
 city	Bielsko-Biala	49.8225	19.0469	PL	176515	Бельско-Бяла	bielsko biala|bielsko-biala|bielskobiala|byala|бельско бяла|бельско-бяла|бельскобяла|бельсько бяла|бельсько-бяла|бельськобяла
@@ -1097,7 +1095,7 @@ city	Kyzyl	51.7111	94.4378	RU	116983	Кызыл	belotsarsk|bielorsarsk|chi ch'i 
 city	Cadiz	36.5267	-6.2891	ES	116979	Кадис	cadiz|gadir|кадис|кадіс
 city	Dabrowa Gornicza	50.3339	19.2048	PL	116971	Домброва-Гурнича	dabrowa gornicza|dombrowa|домброва гурнича|домброва-гурнича|домбровагурнича
 city	Forli	44.2218	12.0414	IT	116696	Форли	forli|форли
-city	Taldykorgan	45.0156	78.3739	KZ	116558	Талдыкорган	gavrilovka|gavrilovskoye|taldi kurgan|taldikorgan|taldiqo'rg'an|taldiqorgan|taldiqurgan|taldy kurgan|taldy-kurgan|taldykorgan|taldykurgan|taldyqorghan|талдикорган|талдикургон|талды коргон|талды-коргон|талдыкарган|талдыкорган|талдыкоргон
+city	Taldykorgan	45.0156	78.3739	KZ	116558	Талдыкорган	gavrilovka|gavrilovskoye|taldi kurgan|taldikorgan|taldiqo'rg'an|taldiqo'rgan|taldiqorg'an|taldiqorgan|taldiqurg'an|taldiqurgan|taldy kurgan|taldy-kurgan|taldykorgan|taldykurgan|taldyqorghan|талдикорган|талдикургон|талды коргон|талды-коргон|талдыкарган|талдыкорган|талдыкоргон
 city	Orleans	47.9025	1.9041	FR	116344	Орлеан	orlean|orleans|арлеан|орлеан
 city	Rouen	49.4431	1.0993	FR	116331	Руан	rouen|ruan|руан
 city	Shahre Jadide Andisheh	35.6803	51.0193	IR	116062	Андише	shahre jadide andisheh|андише
@@ -1283,7 +1281,7 @@ city	Tuerkmenbasy	40.0222	52.9552	TM	91745	Туркменбашы	krasnovodsk|kr
 city	Kars	40.5983	43.0855	TR	91450	Карс	cars|kapc|kars|qars|vanand|карс
 city	Nigde	37.9658	34.6793	TR	91039	Нигде	nigdah|nigde|nigdeh|нигде|нійдэ
 city	Lueleburgaz	41.4017	27.3575	TR	90899	Lueleburgaz	lueleburgaz|lule burgas
-city	Kattaqo'rg'on Shahri	39.9055	66.2656	UZ	90600	Каттакурган	kattakurgan|kattaqo rg on|kattaqo'rg'on shahri|kattaqorgon shahri|kattaqurgon shahri|каттакурган|каттакургон|кетте коргон|кетте-коргон|кеттекоргон
+city	Kattaqo'rg'on	39.9055	66.2656	UZ	90600	Каттакурган	kattakurgan|kattaqo rg on|kattaqo'rg'on|kattaqo'rg'on shahri|kattaqo'rgon|kattaqo'rgon shahri|kattaqorg'on|kattaqorg'on shahri|kattaqorgon|kattaqorgon shahri|kattaqurg'on|kattaqurg'on shahri|kattaqurgon|kattaqurgon shahri|каттакурган|каттакургон|кетте коргон|кетте-коргон|кеттекоргон
 city	Koerfez	40.7670	29.7828	TR	90580	Кёрфез	koerfez|yaremdji|керфез
 city	Cankiri	40.5999	33.6153	TR	90564	Чанкыры	cankiri|changra|changri|chankiri|gangra germanicopolis|ghanjarah|khanjarah|чанкыры
 city	Eslamabad-e Gharb	34.1089	46.5299	IR	90559	Eslamabad-e Gharb	eslamabad e gharb|eslamabad-e gharb|eslamabade gharb
@@ -1442,7 +1440,7 @@ city	Langarud	37.1955	50.1526	IR	68148	Langarud	langarood|langarud
 city	Ardesen	41.1906	40.9793	TR	67965	Ардешен	ardesen|ардешен
 city	Budyonnovsk	44.7839	44.1658	RU	67962	Будённовск	budennowsk|budenovsk|budjennowsk|budyonnovsk|budyonovsk|karabagly|prikumsk|svetaya kresta|svyatoy krest|буденновск
 city	Belogorsk	50.9124	128.5124	RU	67911	Белогорск	aleksandrovka|aleksandrovsk|beletorsk|belogorsk|beloqorsk|kuibyshevka|kuybyshevka|kuybyshevka vostochnaya|kuybyshevka-vostochnaya|kuybyshevkavostochnaya|белагорск|белогорск
-city	Xo'jayli Shahri	42.4088	59.4454	UZ	67800	Ходжейли	gorod khodzheyli|khodzheili|khodzheyli|khojeili|xo jayli shahri|xo'jayli shahri|xojayli shahri|xujayli shahri|ходжейли
+city	Xo'jayli	42.4088	59.4454	UZ	67800	Ходжейли	gorod khodzheyli|khodzheili|khodzheyli|khojeili|xo jayli|xo jayli shahri|xo'jayli|xo'jayli shahri|xojayli|xojayli shahri|xujayli|xujayli shahri|ходжейли
 city	Ishim	56.1125	69.4872	RU	67762	Ишим	ishim|korkina sloboda|ишим|коркина слобода|ішим|ішым
 city	Damghan	36.1679	54.3429	IR	67694	Damghan	damghan
 city	Sirnak	37.5139	42.4543	TR	67662	Ширнак	shirnak|sirnak|ширнак
@@ -1475,7 +1473,7 @@ city	Aran Bidgol	34.0575	51.4829	IR	65404	Aran Bidgol	aran bidgol
 city	Baqershahr	35.5316	51.4048	IR	65388	Baqershahr	baqershahr
 city	Meleuz	52.9647	55.9328	RU	65362	Мелеуз	meleuz|мелеуз|меляуз
 city	Kumertau	52.7649	55.7878	RU	65321	Кумертау	kumertau|кумертау|кумяртау|көміртау|көмүр тоо|көмүр-тоо|көмүртоо
-city	Urgut Shahri	39.4190	67.2612	UZ	65300	Ургут	gorod urgut|urgut shahri|ургут|үргіт|үргүт
+city	Urgut	39.4190	67.2612	UZ	65300	Ургут	gorod urgut|urgut|urgut shahri|ургут|үргіт|үргүт
 city	Slavyansk-na-Kubani	45.2514	38.1213	RU	65196	Славянск-на-Кубани	slavanskaya|slavyansk na kubani|slavyansk-na-kubani|slavyanskaya|slavyansknakubani|slawjanskaja|sslawjanskaja|славянск на кубани|славянск-на-кубани|славянскнакубани|слов'янськ на кубані|словянськ на кубані
 city	Irpin	50.5220	30.2404	UA	65167	Ирпень	irpen|irpen'|irpin|irpin'|ирпень|ірпінь
 city	Kalush	49.0240	24.3721	UA	65088	Калуш	kalush|калуш
@@ -1506,7 +1504,7 @@ city	Cubuk	40.2386	33.0322	TR	62602	Cubuk	cubuk
 city	Krasnoturinsk	59.7666	60.2086	RU	62600	Краснотурьинск	krasnotur'insk|krasnoturinsk|tur'inskiy|turinskiy|краснотурьинск
 city	Belebey	54.1077	54.1174	RU	62582	Белебей	belebei|belebey|белебей|белябей
 city	Pervomaysk	48.0448	30.8478	UA	62426	Первомайск	ol'viopol'|olviopol|olwiopol|pervomaisk|pervomays'k|pervomaysk|первомайск|первомайськ
-city	Kogon Shahri	39.7275	64.5547	UZ	62300	Каган	kagan|kogon shahri|novaya bukhara|каган
+city	Kogon	39.7275	64.5547	UZ	62300	Каган	kagan|kogon|kogon shahri|novaya bukhara|каган
 city	Rzhev	56.2629	34.3289	RU	62246	Ржев	rjev|rjov|rshew|rzhev|ржев|ржэу
 city	Chistopol'	55.3661	50.6440	RU	62200	Чистополь	chistopol|chistopol'|чистополь
 city	Asaka	40.6415	72.2387	UZ	62200	Асака	asaka|asake|assake|leninsk|zelensk|асака
@@ -1580,7 +1578,6 @@ city	Anamur	36.0751	32.8369	TR	57128	Анамур	anamur|anemurium|анамур
 city	Zhigulevsk	53.4033	49.5106	RU	57094	Жигулёвск	otvazhnoye|otvazhnyy|zhigulevsk|жигулевск
 city	Kamyaran	34.7953	46.9368	IR	57077	Kamyaran	kamyaran
 city	Borujen	31.9652	51.2873	IR	57071	Borujen	beroojen|borujen
-city	Nurabad (IR)	30.1140	51.5217	IR	57058	Nurabad (IR)	nurabad
 city	Dehdasht	30.7934	50.5651	IR	57036	Dehdasht	dehdasht|dehdast|kuhgiluyeh
 city	Reyhanli	36.2679	36.5675	TR	56995	Рейханлы	airanndji|airinge|ayranci|ayranj|rehaniye|reyhaniye|reyhanli|рейханлы
 city	Roslavl'	53.9539	32.8641	RU	56971	Рославль	raslawl|roslavl|roslavl'|roslawl|рославль
@@ -1607,7 +1604,6 @@ city	Bozueyuek	39.9078	30.0367	TR	55365	Bozueyuek	bozueyuek
 city	Nazarovo	56.0114	90.4166	RU	55252	Назарово	nazarovo|назарава|назарово
 city	Rubizhne	49.0085	38.3797	UA	55247	Рубежное	rubezhnaya|rubezhnoye|rubizhne|рубежное|рубіжне
 city	Klimovsk	55.3635	37.5298	RU	55206	Климовск	klimovsk|klimovskiy|климовск|климовськ|клімауск
-city	Abyek (IR)	36.0667	50.5500	IR	55128	Abyek (IR)	abiak|abyek
 city	Eqbaliyeh	36.2308	49.9250	IR	55066	Eqbaliyeh	eqbaliyeh|sultanabad
 city	Berezovskiy	55.6695	86.2749	RU	55000	Берёзовский	berezovskiy|березовский
 city	Belorechensk	44.7700	39.8725	RU	54526	Белореченск	belorechensk|belorechenskaya|beloretschenskaja|беларэчанск|белореченск
@@ -1760,7 +1756,7 @@ city	Han'airike	37.5417	80.1174	CN	43751	Han’airike	han'airike|hanairike
 city	Sertolovo	60.1444	30.2017	RU	43622	Сертолово	sertolovo|sertolovo pervoye|сертолово
 city	Farah	32.3745	62.1164	AF	43561	Фарах	farah|farakh|faro|ferah|фарах|фора
 city	Malgobek	43.5112	44.5905	RU	43400	Малгобек	malgobek|малгабек|малгобек
-city	G'ijduvon Shahri	40.1022	64.6823	UZ	43400	G’ijduvon Shahri	akmal' abad|akmal'-abad|akmal'abad|akmal-abad|g'ijduvon shahri|ghijduwon|gidzhduvan|gijduvan|gijduvon|gijduvon shahri|gizhduvan|gydzh duvan|gydzh-duvan|gydzha dovan|gydzha-dovan|gydzhadovan|gydzhduvan
+city	G'ijduvon	40.1022	64.6823	UZ	43400	G’ijduvon Shahri	akmal' abad|akmal'-abad|akmal'abad|akmal-abad|g'ijduvon|g'ijduvon shahri|ghijduwon|gidzhduvan|gijduvan|gijduvon|gijduvon shahri|gizhduvan|gydzh duvan|gydzh-duvan|gydzha dovan|gydzha-dovan|gydzhadovan|gydzhduvan
 city	Luntai	41.7795	84.2705	CN	43314	Luntai	bugar|bugur bazar|lun t'ai chen|lun t'ai hsien|lun-t'ai-chen|lun-t'ai-hsien|lun-tai-chen|lun-tai-hsien|lunt'aichen|lunt'aihsien|luntai|luntai xian|pu ku erh|pu-ku-erh|pukuerh
 city	Morshansk	53.4432	41.8106	RU	43311	Моршанск	morschansk|morshansk|моршанск
 city	Sovetsk	55.0839	21.8785	RU	43309	Советск	sovetsk|sovyetsk|til'zit|tilsit|tilzit|савецк|советск
@@ -1821,7 +1817,7 @@ city	Korkino	54.8915	61.3920	RU	40046	Коркино	korkino|коркино
 city	Lisakovsk	52.5449	62.4989	KZ	40000	Лисаковск	lisakovka|lisakovsk|лисаков|лисаковск
 city	Yagry	64.5942	39.8103	RU	40000	Ягры	yagry|ягры
 city	Langepas	61.2544	75.2124	RU	40000	Лангепас	langepas|лангепас
-city	Uchqurghon Shahri	41.1137	72.0791	UZ	40000	Учкурган	gorod uchkurgan|uchkurgan|uchqurghon shahri|уч курган|уч-курган|учкурган
+city	Uchqurghon	41.1137	72.0791	UZ	40000	Учкурган	gorod uchkurgan|uchkurgan|uchqurghon|uchqurghon shahri|уч курган|уч-курган|учкурган
 city	Uray	60.1304	64.7890	RU	39878	Урай	nizhnyaya arpa|urai|uray|урай
 city	Alexeyevka	50.6309	38.6903	RU	39848	Алексе́евка	alekseyevka|alexeyevka|алексе евка|алексеевка
 city	Svetlograd	45.3274	42.8562	RU	39727	Светлоград	petrovskoe|petrovskoye|petrowskoje|svetlograd|svetloqrad|светлаград|светлоград|світлоград
@@ -1992,7 +1988,7 @@ city	Likino-Dulevo	55.7083	38.9542	RU	31100	Ликино-Дулево	dulevo|lik
 city	Dyurtyuli	55.4873	54.8618	RU	31087	Дюртюли	dyrtyli|dyurtyuli|дюртюли
 city	Rostov Veliky	57.1908	39.4131	RU	31039	Ростов Великий	rostov|rostov velikiy|rostov veliky|rostov yaroslavskiy|rostov-yaroslavskiy|rostovyaroslavskiy|rostow|растоу|ростов|ростов великий
 city	Bayanhongor	46.1944	100.7181	MN	30931	Баянхонгор	bayanhongor|dzaluuchuud|youth city|баянhонгор|баянхонгор
-city	Gumdag	39.2024	54.5875	TM	30884	Гумдаге	gumdag|khudaidag|khuday dag|khuday-dag|khudaydag|kum dag|kum-dag|kumdag|qumdog shahri|qumdog' shahri|гумдаг|гумдаге
+city	Gumdag	39.2024	54.5875	TM	30884	Гумдаге	gumdag|khudaidag|khuday dag|khuday-dag|khudaydag|kum dag|kum-dag|kumdag|qumdog|qumdog shahri|qumdog'|qumdog' shahri|гумдаг|гумдаге
 city	Yugorsk	61.3123	63.3307	RU	30878	Югорск	komsomol'skiy|komsomolskiy|yugorsk|югорск
 city	Sorochinsk	52.4288	53.1502	RU	30731	Сорочинск	sorochinsk|сорочинск
 city	Zarhalol	37.4647	68.1695	TJ	30689	Zarhalol	bashkala|bishkala|boshkala|kommunizm|zarhalol|бошкалъа|зархалол
@@ -2001,7 +1997,6 @@ city	Sabirabad	40.0087	48.4770	AZ	30612	Сабирабад	petropavlovka|petropa
 city	Topki	55.2771	85.6135	RU	30572	Топки	topki|топки
 city	Kirzhach	56.1527	38.8551	RU	30566	Киржач	kirshatsch|kirzhach|киржач|кіржач
 city	Suzak	40.8982	72.9048	KG	30534	Сузак	suzak|сузак
-city	Sandaoling Lutiankuang Wuqi Nongchang	43.0148	92.8828	CN	30513	Sandaoling Lutiankuang Wuqi Nongchang	
 city	Khorugh	37.4904	71.5534	TJ	30500	Хорог	khorog|khorugh|xorog|хорог|хоруг
 city	Starominskaya	46.5309	39.0516	RU	30461	Староминская	starominskaja|starominskaya|староминская
 city	Borzya	50.3914	116.5336	RU	30421	Борзя	bolzhia|borzya|борзя
@@ -2031,7 +2026,7 @@ city	Arvayheer	46.2639	102.7750	MN	29420	Арвайхээр	arbai khere|arbay he
 city	Sosnogorsk	63.5967	53.8918	RU	29343	Сосногорск	izhma|sosnogorsk|саснагорск|сосногорск
 city	Morozovsk	48.3510	41.8290	RU	29289	Морозовск	morosowski|morosowskij|morozovsk|morozovskaya|morozovskiy|марозауск|морозовск|морозовськ
 city	Zernograd	46.8486	40.3116	RU	29268	Зерноград	zernograd|zernoqrad|zernovol|zernovoy|зернаград|зерноград
-city	Bulung'ur Shahri	39.7600	67.2744	UZ	29200	Bulung’ur Shahri	bulung'ur|bulung'ur shahri|bulunghur|bulungur|bulungur shahri|krasnogvardeiskoye|krasnogvardeysk|krasnogvardeyskaya|krasnogvardeyskoye|krasnogvardskiy|rostovtsevo|булуңгур|бұлыңгыр
+city	Bulung'ur	39.7600	67.2744	UZ	29200	Bulung’ur Shahri	bulung'ur|bulung'ur shahri|bulunghur|bulungur|bulungur shahri|krasnogvardeiskoye|krasnogvardeysk|krasnogvardeyskaya|krasnogvardeyskoye|krasnogvardskiy|rostovtsevo|булуңгур|бұлыңгыр
 city	Ipatovo	45.7180	42.9061	RU	29073	Ипатово	i patovo|ipatovo|spatowo|vinodel'noye|vinodelnoye|ипатово|іпатава|іпатово
 city	Shelek	43.5962	78.2575	KZ	29032	Чилик	chilik|chiliksk|shelek|чилик|шелек
 city	Unecha	52.8429	32.6876	RU	29028	Унеча	uncha|unecha|unetscha|унеча
@@ -2053,7 +2048,7 @@ city	Toshbuloq	40.9162	71.5782	UZ	28562	Toshbuloq	tashbulak|toshbuloq
 city	Kartaly	53.0596	60.6412	RU	28503	Карталы	kartaly|картали|карталы
 city	Kochubeyevskoye	44.6442	41.8453	RU	28491	Кочубеевское	kochubeyevskoye|кочубеевское
 city	Zheleznogorsk-Ilimskiy	56.5767	104.1297	RU	28456	Железногорск-Илимский	korshunikha|zheleznogorsk|zheleznogorsk ilimskiy|zheleznogorsk-ilimskiy|zheleznogorskilimskiy|железногорск илимский|железногорск-илимский|железногорскилимский
-city	Yangiqo`rg`on	41.1947	71.7238	UZ	28422	Yangiqo‘rg‘on	yangikurgan|yangiqo rg on|yangiqo'rg'on|yangiqorgon|yangiqurgon
+city	Yangiqo`rg`on	41.1947	71.7238	UZ	28422	Yangiqo‘rg‘on	yangikurgan|yangiqo rg on|yangiqo'rg'on|yangiqo'rgon|yangiqorg'on|yangiqorgon|yangiqurg'on|yangiqurgon
 city	OElgii	48.9683	89.9625	MN	28400	Улгий	bayan ulegey|bayan-ulegey|bayanulegey|oelgii|olgii|ul'gey|ulegei|ulegey|ulegy|ulgey|ulgiy|улгий|өлгий|өлке
 city	Tomilino	55.6562	37.9471	RU	28310	Томилино	tomilino|таміліна|томилино|томіліно
 city	Pokhvistnevo	53.6524	52.1274	RU	28300	Похвистнево	pokhvistnevo|пахвістнева|похвистнево
@@ -2090,7 +2085,7 @@ city	Shalqar	47.8315	59.6193	KZ	27399	Шалкар	chelkar|shalqar|челкар|
 city	Kayyerkan	69.3786	87.7439	RU	27295	Кайеркан	kajerkam|kayerkan|kayyerkan|кайеркан
 city	Krasnoural'sk	58.3638	60.0407	RU	27257	Красноуральск	krasnoural'sk|krasnouralsk|uralmed'stroy|uralmedstroy|красноуральск|уралмедьстрой
 city	Nikolayevsk-on-Amure	53.1466	140.7229	RU	27152	Николаевск-на-Амуре	nikolaevsk|nikolaevsk on amur|nikolaevsk-on-amur|nikolaevskonamur|nikolaievsk|nikolayevsk|nikolayevsk on amur|nikolayevsk on amure|nikolayevsk-on-amur|nikolayevsk-on-amure|nikolayevskonamur|nikolayevskonamure|николаевск на амуре|николаевск-на-амуре|николаевскнаамуре
-city	Zomin Shaharchasi	39.9606	68.3958	UZ	27077	Зомин	saamin|zaamin|zomin|zomin shaharchasi|зомин
+city	Zomin	39.9606	68.3958	UZ	27077	Зомин	saamin|zaamin|zomin|zomin shaharchasi|зомин
 city	Asino	56.9992	86.1552	RU	27070	Асино	asino|асино|асіна|асіно
 city	Labytnangi	66.6572	66.4183	RU	27067	Лабытнанги	labytnangi|лабитнанги|лабитнангі|лабытнанги|лабытнангі
 city	Dedovsk	55.8686	37.1222	RU	27001	Дедовск	dedovo|dedovsk|dedovskiy|дедовск|дзедауск
@@ -2105,7 +2100,7 @@ city	Kara Suu	40.7046	72.8667	KG	26609	Кара-Суу	kara su|kara suu|kara-su|
 city	Gubakha	58.8386	57.5532	RU	26605	Губаха	gubakha|qubaxa|губаха
 city	Pavlovsk	50.4543	40.1237	RU	26565	Павловск	pavlovsk|павловск|павловськ|паулауск
 city	Okha	53.5949	142.9528	RU	26560	Оха	okha|okhe|оха
-city	Shofirkon Shahri	40.1200	64.5014	UZ	26527	Shofirkon Shahri	baumana|khodzha arif|khodzha-arif|khodzhaarif|shafirkan|shafrikan|shafrikent|shofirkon shahri
+city	Shofirkon	40.1200	64.5014	UZ	26527	Shofirkon Shahri	baumana|khodzha arif|khodzha-arif|khodzhaarif|shafirkan|shafrikan|shafrikent|shofirkon|shofirkon shahri
 city	Salor	41.3750	69.3520	UZ	26494	Salor	chirchik|salar|salor
 city	Buy	58.4796	41.5359	RU	26486	Буй	buy|буй
 city	Metallostroy	59.8008	30.5478	RU	26361	Металлострой	metallostroy|металлострой
@@ -2120,7 +2115,7 @@ city	Kubinka	55.5796	36.7039	RU	25942	Кубинка	kubinka|кубинка|ку
 city	Kaltan	53.5278	87.2758	RU	25903	Калтан	kaltan|kaltanskaya|nizhniy kaltan|калтан
 city	Siyazan	41.0781	49.1156	AZ	25900	Сиазань	siazan|siazan'|siyazan|сиазань
 city	Nev'yansk	57.4923	60.2141	RU	25900	Невьянск	nev'yansk|nevyansk|невьянск
-city	Qo`rg`ontepa	40.7319	72.7618	UZ	25861	Qo‘rg‘ontepa	kurgan tepe|kurgan tyube|kurgan-tepe|kurgantepa|kurgantepe|kyzyl tepa|kyzyl-tepa|kyzyltepa|qo rg ontepa|qo'rg'ontepa|qorgontepa|qurgontepa
+city	Qo`rg`ontepa	40.7319	72.7618	UZ	25861	Qo‘rg‘ontepa	kurgan tepe|kurgan tyube|kurgan-tepe|kurgantepa|kurgantepe|kyzyl tepa|kyzyl-tepa|kyzyltepa|qo rg ontepa|qo'rg'ontepa|qo'rgontepa|qorg'ontepa|qorgontepa|qurg'ontepa|qurgontepa
 city	Krasnoarmeysk	51.0235	45.6966	RU	25841	Красноармейск	bal'tser|baltser|golyy karamysh|krasnoarmeysk|pantsir|краснаармейск|красноармейск|красноармійськ
 city	Artvin	41.1816	41.8217	TR	25841	Артвин	artivin|artvin|artwin|артвин|артвін
 city	Fokino	42.9710	132.4103	RU	25827	Фокино	fokino|tikhookeanskiy|тихоокеанский|фокино|фокіна|фокіно
@@ -2152,8 +2147,7 @@ city	Yaypan	40.3758	70.8156	UZ	24900	Яйпан	bazar yaypan|bazar-yaypan|bazary
 city	Yangiobod	41.1192	70.0941	UZ	24900	Янгиабад	yangiabad|yangiobod|янгиабад|янгіабад
 city	Dalandzadgad	43.5708	104.4250	MN	24863	Даланзадгад	dalan dsadagad|dalan dzadagad|dalan tszadagad|dalan tzadagad|dalan zadagad|dalan-zadagad|dalandzadgad|dalanzadagad|dalanzadgad|daranzagatai|dzadagad|ta-lan-ken-kuo-lo|ta-leng-keng miao|talankenkuolo|talengkeng miao|даланзадгад
 city	Zafar	40.9833	68.9000	UZ	24781	Зафар	almazar|olmazor|vrevskiy|zafar|зафар
-city	Payshamba Shahri	40.0114	66.2311	UZ	24772	Пайшанба	payshamba shahri|payshanba|payshmba|бейсенбі|бейшемби|пайшанба
-city	G'allaorol Shahri	40.0270	67.5878	UZ	24700	G’allaorol Shahri	g allaorol|g'allaorol shahri|gallaorol shahri|gallia aral|gallia-aral|galliaaral|gallyaaral|ghallaorol
+city	G'allaorol	40.0270	67.5878	UZ	24700	G’allaorol Shahri	g allaorol|g'allaorol|g'allaorol shahri|gallaorol|gallaorol shahri|gallia aral|gallia-aral|galliaaral|gallyaaral|ghallaorol
 city	Zaraysk	54.7633	38.8808	RU	24637	Зарайск	zaraisk|zaraysk|зарайск
 city	Zheleznovodsk	44.1432	43.0048	RU	24632	Железноводск	shelesnowodsk|zheleznovodak|zheleznovodsk|zhelyednovodsk|железноводск
 city	Ostrov	57.3438	28.3536	RU	24500	Остров	ostrov|острау|остров
@@ -2227,7 +2221,6 @@ city	Medvedevo	56.6340	47.8035	RU	22555	Медведево	medvedevo|медве�
 city	Vikhorevka	56.1213	101.1777	RU	22500	Вихоревка	vikhorevka|вихоревка
 city	Qorako'l	39.5333	63.8333	UZ	22487	Каракуль	kara kal|karakul|karakul'|stantslya karakul|stantslya-karakul|stantslyakarakul|каракуль
 city	Vereshchagino	58.0782	54.6565	RU	22451	Верещагино	bereshchagino|bereshchangino|vereshchagino|верещагино
-city	Quba	41.3611	48.5134	AZ	22405	Куба	kuba|kuwa|quba|губа|куба|кұба
 city	Shakhun'ya	57.6760	46.6117	RU	22400	Шахунья	shakhun'ya|shakhunya|шахунья
 city	Sergach	55.5277	45.4568	RU	22361	Сергач	sergach|сергач
 city	Bryukhovetskaya	45.7996	38.9967	RU	22309	Брюховецкая	bryukhovetskaya|брюховецкая
@@ -2258,11 +2251,11 @@ city	Causeni	46.6374	29.4109	MD	21690	Каушаны	causeni|kauseni|kaushani|ka
 city	Khadyzhensk	44.4258	39.5362	RU	21685	Хадыженск	khadyzhensk|khadyzhenskaya|khadyzhenskiy|khadyzhensky|khadyzhy|хадиженск|хадиженськ|хадыженск|хадыжэнск
 city	Tsetserleg	47.4750	101.4542	MN	21620	Цэцэрлэг	cecerleg|tsetserleg|tsetserlig|tsetserlig khoto|tsetserlig-khoto|tsetserligkhoto|tsetserlik|tsetserurigu|цэцэрлэг
 city	G'azalkent	41.5581	69.7708	UZ	21600	Газалкент	g azalkent|g'azalkent|gazalkent|ghazalkent|газалкент
-city	Juma Shahri	39.7161	66.6642	UZ	21500	Жума Шаары	dzhuma|juma|juma shahri|жума шаары|жұма каласы
+city	Juma	39.7161	66.6642	UZ	21500	Жума Шаары	dzhuma|juma shahri|жума шаары|жұма каласы
 city	Shimanovsk	52.0032	127.6762	RU	21466	Шимановск	shimanovsk|shimanovskaya|shimanovskiy|shimanovskoye|шимановск|шимановськ|шыманоуск
 city	Kovylkino	54.0372	43.9187	RU	21400	Ковылкино	kovykino|kovylkino|кавылкіна|ковилкино|ковилкіно|ковылкино
 city	Otradnoye	59.7775	30.8181	RU	21397	Отрадное	otradnoye|отрадное
-city	Paxtakor Shahri	40.3118	67.9567	UZ	21384	Paxtakor Shahri	pakhtakor|paxtakor|paxtakor shahri
+city	Paxtakor	40.3118	67.9567	UZ	21384	Paxtakor Shahri	pakhtakor|paxtakor|paxtakor shahri
 city	Zhangaqorghan	43.9065	67.2464	KZ	21339	Яныкурган	yani kurgan|yani-kurgan|yanikurgan|yany kurian|yany-kurian|yanykurgan|yanykurian|zhanakorgan|zhangaqorghan|жанакорган|жаңакорган|яныкурган
 city	Lenger	42.1815	69.8858	KZ	21238	Ленгер	kopi lenger|kopi-lenger|kopilenger|lenger|lenger ugol'|lenger-ugol|lenger-ugol'|lengerskaya|lengerskij|lengerskiy|lengerugol'|lengir|ленгер|ленгір
 city	Sheksna	59.2100	38.5107	RU	21197	Шексна	nikol'skoye|nikolskoye|sheksna|шексна
@@ -2412,7 +2405,7 @@ city	Avtury	43.1634	46.0015	RU	18370	Автуры	avturi|avtury|novosadovoye|а�
 city	Ardon	43.1789	44.2946	RU	18313	Ардон	ardon|ардон
 city	Priozersk	61.0403	30.1392	RU	18300	Приозерск	keksgol'm|keksgolm|keksholm|kexholm|korela|kyakisalmi|priozersk|yeksgol'm|yeksgolm|приозерск
 city	Kotel'niki	55.6538	37.8623	RU	18300	Котельники	kotel'nika|kotel'niki|kotelnika|kotelniki|котельники
-city	Do'stlik Shahri	40.5288	68.0315	UZ	18300	Do’stlik Shahri	do'stlik shahri|dostlik shahri|dustlik|dustlik shahri
+city	Do'stlik	40.5288	68.0315	UZ	18300	Do’stlik Shahri	do'stlik shahri|dostlik shahri|dustlik|dustlik shahri
 city	Beloozyorskiy	55.4598	38.4436	RU	18297	Белоозёрский	beloozyorskiy|beloozyorsky|белоозерский
 city	Nookat	40.2660	72.6183	KG	18228	Nookat	eski nookat|eski-nookat|eskinookat|iski naukat|iski-naukat|iskinaukat|nookat
 city	Kharabali	47.4077	47.2539	RU	18223	Харабали	charabali|charabalinskoje|kharabali|харабали|харабалі
@@ -2439,7 +2432,7 @@ city	Zhirnovsk	50.9788	44.7789	RU	17887	Жирновск	zhirnovoye|zhirnovsk|zh
 city	Privolzhsk	57.3839	41.2916	RU	17864	Приволжск	privoljsk|privolzhsk|yakovlevskoye|приволжск
 city	Nevel'	56.0200	29.9282	RU	17832	Невель	nevel|nevel'|newel|невель
 city	Hlybokaye	55.1393	27.6914	BY	17807	Глубокое	glenboke|glubokoye|hlybokaje|hlybokaye|глубокое|глыбокае
-city	Vobkent Shahri	40.0003	64.5021	UZ	17800	Vobkent Shahri	vabkend|vabkent|vobkent shahri|wobkent
+city	Vobkent	40.0003	64.5021	UZ	17800	Vobkent Shahri	vabkend|vabkent|vobkent|vobkent shahri|wobkent
 city	Qo'shko'pir	41.5328	60.3470	UZ	17800	Qo’shko’pir	kosh kunir|koshkupyr|qo'shko'pir|qoshkopir|qushkupir
 city	Zapolyarnyy	69.4260	30.8110	RU	17789	Заполярный	zapolyarnyy|заполярный
 city	Aprelevka	55.5519	37.0801	RU	17780	Апрелевка	aprelevka|апрелевка|апрэлеука
@@ -2472,7 +2465,6 @@ city	Chudovo	59.1223	31.6812	RU	17377	Чудово	chudovo|tschudowo|чудов�
 city	Boksitogorsk	59.4778	33.8501	RU	17366	Бокситогорск	boksitogorsk|boksitoqorsk|баксітагорск|бокситогорск|бокситогорськ
 city	Kantyshevo	43.2282	44.6332	RU	17363	Кантышево	kantyshevo|nartovo|nartovskoya|кантышево
 city	Gavrilov-Yam	57.3026	39.8526	RU	17351	Гаврилов-Ям	gavrilov yam|gavrilov-yam|gavrilovyam|гаврилов ям|гаврилов-ям|гавриловям
-city	Bulgan	48.8125	103.5347	MN	17348	Булган	bulagan|bulagan khan|bulagan somon|bulagan suma|bulagan sumu|bulagan-khan|bulagankhan|bulgan|bulgan han|болган|булган
 city	Mehtar Lam	34.6714	70.2094	AF	17345	Митарлам	laghman|mehtar lam|mekhtarlam|metarlam|mextar lam|miterlam|мехтар лам|мехтар-лам|мехтари лом|мехтарлам|митарлам
 city	Polyarnyy	69.2028	33.4370	RU	17332	Полярный	alexandrovsk|polyarny|polyarnyy|port alexandrovsk|полярный
 city	Suvorovskaya	44.1901	42.6595	RU	17261	Суворовская	suvorovskaya|суворовская
@@ -2510,7 +2502,6 @@ city	Akkol'	53.2962	69.6000	KZ	16773	Акколь	akkol|akkol'|акколь|ак
 city	Belyy Yar	61.2649	73.2410	RU	16772	Белый Яр	belyy yar|белый яр
 city	Plavsk	53.7084	37.2946	RU	16763	Плавск	plavsk|plavskiy|plavskoye|plawsk|sergiyevskoye|плавск|плавское|плауск|сергиевское
 city	Floresti	47.8917	28.2934	MD	16759	Флорешты	floresht|floresht'|floreshti|floreshty|floresti|флорешты
-city	Chelak Shahri	39.9200	66.8623	UZ	16727	Chelak	chelak|chelak shahri|chelek|chelekskiy rayon|payaryk|челек|шелек
 city	Lakinsk	56.0193	39.9485	RU	16706	Лакинск	lakinsk|lakinskiy|лакинск|лакінск
 city	Tuerkmengala	37.4247	62.3382	TM	16696	Туркменгала	tuerkmengala|turkmen kala|turkmen-kala|turkmengala|turkmenkala|туркменгала
 city	Poronaysk	49.2204	143.0912	RU	16677	Поронайск	poronaysk|shikika|shikuka|shisuka|sikuka|поронайск
@@ -2629,7 +2620,7 @@ city	At-Bashi	41.1695	75.8010	KG	14655	Ат-Баши	at bashi|at-bashi|atbashi|�
 city	Singerei	47.6369	28.1407	MD	14600	Сынжерея	lazovsk|senzherey|singerei|syndzherey|synzhereya|synzheria|лазовск|сынжерей|сынжерея
 city	Farap	39.1704	63.6116	TM	14503	Фарап	farab|farap|фарап
 city	Gadabay	40.5705	45.8123	AZ	14500	Кедабек	gadabay|kedabek|kedabeko|kedalek|kiadabak|kyadabek|кедабек|кядабек
-city	Jomboy Shahri	39.6989	67.0933	UZ	14429	Jomboy Shahri	dzhambay|jomboy|jomboy shahri|khashdala|khoshdala|жамбай каласы|жамбай шаары
+city	Jomboy	39.6989	67.0933	UZ	14429	Jomboy Shahri	dzhambay|jomboy|jomboy shahri|khashdala|khoshdala|жамбай каласы|жамбай шаары
 city	Falesti	47.5767	27.7126	MD	14377	Фалешты	faleshti|falesti|фалешти|фалешты
 city	Leova	46.4819	28.2530	MD	14301	Леово	leova|leovo|levo|леова|леово
 city	Bokombayevskoye	42.1177	76.9933	KG	14267	Бокомбаевское	bokombayevskoye|bokonbayevo|bokonbayevskoye|kol'tsovka|koltsovka|kunchigysh|бокомбаевское|бөкөнбай
@@ -2661,7 +2652,6 @@ city	Esil	51.9545	66.4077	KZ	13504	Yesil’	esil|yesil|yesil'|есиль|есі�
 city	Mo'ynoq	43.7683	59.0214	UZ	13500	Муйнак	mo'ynoq|moynaq|moynoq|muinak|muynak|muynoq|мойнок|муйнак|муйнок
 city	Hojambaz	38.1163	65.0035	TM	13485	Ходжамбаз	hocambaz|hojambaz|khodzhambas|khodzhambass|ходжамбаз
 city	Hamza	40.4276	71.5053	UZ	13470	Hamza	hamza|imeni khamzy khakimzade|khamza|khamza khakimzada|khamzy khakimzade|vannovskiy
-city	Tinchlik	40.4759	71.5509	UZ	13470	Tinchlik	vodkhoz
 city	Babadaykhan	37.6833	60.4333	TM	13440	Бабадайхан	baba deykhan|baba deykhan pervyy|baba deykhan vtoroy|baba-deykhan|baba-deykhan vtoroy|baba-deykhan-pervyy|babadaykhan|babadaykhan vtoroy|babadeykhan|babadeykhan vtoroy|babadeykhanpervyy|бабадайхан
 city	Amondara	39.5144	67.8108	TJ	13380	Амондара	amandara|amondara|амондара
 city	Adrasmon	40.6493	69.9847	TJ	13372	Адрасман	adrasman|adrasmon|адрасман|адрасмон
@@ -2669,33 +2659,33 @@ city	Tagtabazar	35.9553	62.9174	TM	13312	Тагтабазар	tagtabazar|таг�
 city	Shakhan	49.8196	72.6541	KZ	13273	Шахан	shakan|shakanskiye vyselki|shakhan|shaqan|шакан|шахан
 city	Inderbor	48.5500	51.7833	KZ	13254	Индерборский	inder|inderbor|inderborskiy|inderborstroy|indero|inderskoye|индербор|индерборский
 city	Pul-e 'Alam	33.9953	69.0227	AF	13247	Пуль-и-Алам	pol e alam|pol-e alam|pole alam|pul e 'alam|pul e alam|pul i alam|pul-e 'alam|pul-e alam|pul-i-alam|pule 'alam|pule alam|puli olam|pulialam|пул е алам|пул е әлем|пул-е алам|пул-е әлем|пуле алам|пуле әлем|пули олам|пуль и алам|пуль-и-алам|пульиалам
-city	Olot Shahri	39.4150	63.8033	UZ	13200	Olot Shahri	alat|alata|olot shahri
+city	Olot	39.4150	63.8033	UZ	13200	Olot Shahri	alat|alata|olot|olot shahri
 city	Zhangaarqa	48.6866	71.6447	KZ	13184	Атасу	atasu|atasuskiy|stantsiya atasu|zhanaarka|zhangaarqa|атасу|жанаарка|жаңаарка
 city	Sovetskoye	41.0518	72.7396	KG	13178	Советское	sovet|sovetskoe|sovetskoye|совет|советское
 city	Kulan	42.9102	72.7157	KZ	13128	Луговое	kulan|lugovaya|lugovoye|qulan|кулан|кұлан|луговое
 city	Shahritus	37.2621	68.1385	TJ	13042	Шахритус	shaarfuz|shaartuz|shahritus|shahrtuz|шахритус
-city	Ishtixon Shahri	39.9664	66.4861	UZ	13024	Ishtixon Shahri	ishtihon|ishtikhon|ishtixon shahri|ishtykhan
+city	Ishtixon	39.9664	66.4861	UZ	13024	Ishtixon Shahri	ishtihon|ishtikhon|ishtixon|ishtixon shahri|ishtykhan
 city	Turgen	43.4006	77.5933	KZ	13000	Турген	turgen|turgen'|турген|түрген
-city	Romitan Shahri	39.9294	64.3794	UZ	12927	Romitan Shahri	kal'ty mauri|kal'ty-mauri|kal'tymauri|kalty-mauri|ramitan|rometan|romitan shahri|romiton
+city	Romitan	39.9294	64.3794	UZ	12927	Romitan Shahri	kal'ty mauri|kal'ty-mauri|kal'tymauri|kalty-mauri|ramitan|rometan|romitan|romitan shahri|romiton
 city	Esenguly	37.4680	53.9795	TM	12918	Гасан-Кули	aul gassan kuli|aul gassan-kuli|aul gassankuli|esenguly|gasan kuli|gasan-kuli|gasankuli|gassan kuli|gassan-kuli|gassankuli|hasan kuli|hasan quili|hasan-kuli|hasankuli|гасан кули|гасан-кули|гасанкули|есенгули
 city	Atakent	40.8478	68.5064	KZ	12895	Ильич	atakent|il'ich|ilich|ilyich|атакент|ильич
 city	Riscani	47.9483	27.5667	MD	12893	Рышканы	rashkan tyrg|rashkan' tyrg|rashkani tyrg|rashkani-tyrg|rashkanityrg|riscani|rishkan|ryshkanovka|ryshkany|рышканы|рышкань
 city	Tovuz	40.9925	45.6284	AZ	12626	Тауз	tauz|tavus|tovuz|тауз|товуз|товыз
-city	Galaosiyo Shahri	39.8572	64.4464	UZ	12600	Galaosiyo Shahri	galaasiya|galaassiya|galaosiyo shahri|gallya asiya|gallya assiya|gallya-asiya|gallya-assiya|gallyaasiya|gallyaassiya
+city	Galaosiyo	39.8572	64.4464	UZ	12600	Galaosiyo Shahri	galaasiya|galaassiya|galaosiyo|galaosiyo shahri|gallya asiya|gallya assiya|gallya-asiya|gallya-assiya|gallyaasiya|gallyaassiya
 city	Etrek	37.6616	54.7640	TM	12508	Etrek	bayat khadzhi|bayat-khadzhi|bayatkhadzhi|etrek|gyzyletrek|kizel atrek|kizel-atrek|kizelatrek|kizil atrek|kizil-atrek|kizilatrek|kizyl atrek|kizyl-atrek|kizylatrek|kyzyl atrek|kyzyl-atrek|kyzylatrek|kyzylay
 city	Cimislia	46.5263	28.7649	MD	12464	Чимишлия	chimishliya|cimislia|чимишлия
-city	Kegeyli Shahar	42.7767	59.6078	UZ	12400	Kegeyli Shahar	kegayli|kegeyli|kegeyli shahar
+city	Kegeyli	42.7767	59.6078	UZ	12400	Kegeyli Shahar	kegayli|kegeyli|kegeyli shahar
 city	Tyup	42.7276	78.3648	KG	12355	Тюп	preobrazhenskoye|tjup|tyup|тюп
-city	Payariq Shahri	39.9925	66.8501	UZ	12345	Payariq Shahri	fedorovskoye|narimanovka|narimanovo|narimanowka|pai aryk|pay aruk|pay-aruk|payariq|payariq shahri|payaruk|payaryk
+city	Payariq	39.9925	66.8501	UZ	12345	Payariq Shahri	fedorovskoye|narimanovka|narimanovo|narimanowka|pai aryk|pay aruk|pay-aruk|payariq|payariq shahri|payaruk|payaryk
 city	Mandalgovi	45.7625	106.2708	MN	12339	Мандалгови	mandal gobi|mandalgovi|mandalgow|mandalgow'|мандалгови
-city	G'oliblar Qishlog'i	40.4953	67.8759	UZ	12300	G’oliblar Qishlog’i	g oliblar|g'oliblar qishlog'i|gholiblar|goliblar qishlogi|imeni yuliusa fuchika|yuliusa fuchika
+city	G'oliblar	40.4953	67.8759	UZ	12300	G’oliblar Qishlog’i	g oliblar|g'oliblar qishlog'i|gholiblar|goliblar|goliblar qishlogi|imeni yuliusa fuchika|yuliusa fuchika
 city	Temirlanovka	42.6000	69.2584	KZ	12245	Темирлановка	tamerlanovka|temirlan|temirlanovka|темирлановка|темірлан
 city	Aghstafa	41.1189	45.4539	AZ	12200	Агстафа	aghstafa|akstafa|akstafal|aqstafa|агстафа
 city	Qiziltepa	40.0331	64.8500	UZ	12200	Кызылтепа	kizil tepe|kizil-tepe|kiziltepe|kyzyl tepe|kyzyltepa|qiziltepa|кизилтепа|кизилтепе|кызыл дөбө|кызыл-дөбө|кызылдөбө|кызылтепа|кызылтөбе
 city	Qalat	32.1058	66.9083	AF	12191	Калат	kalat|qalat|калат|калот
 city	Qax	41.4183	46.9204	AZ	11992	Кахи	kah|kakhi|qakh|qax|ках|кахи|кох
 city	Mu'minobod	38.1071	70.0321	TJ	11955	Mu'minobod	leningrad|leningradskiy|mu'minobod|muminabad|muminobod|mumynabad
-city	Oqqo'rg'on	40.8775	69.0458	UZ	11900	Аккурга	akkurgan|oqqo rg on|oqqo'rg'on|oqqorgon|oqqurgon|аккурга|оккургон
+city	Oqqo'rg'on	40.8775	69.0458	UZ	11900	Аккурга	akkurgan|oqqo rg on|oqqo'rg'on|oqqo'rgon|oqqorg'on|oqqorgon|oqqurg'on|oqqurgon|аккурга|оккургон
 city	Sakarcaege	37.6635	61.6601	TM	11891	Сакарджхаге	sagar chaga|sagar-chaga|sagarchaga|sakar chaga|sakar-chaga|sakarcaege|sakarchaga|сакарджхаге
 city	Qabala	40.9814	47.8458	AZ	11867	Габала	gabala|kabala|kutkashen|kutkashin|qabala|габала|кабала
 city	Aydarken	39.9432	71.3418	KG	11857	Хайдаркан	aidarken|aydarken|khaidarkan|khaydarkan|khaydarken|xaydarkon|айдаркен|хайдаркан
@@ -2718,7 +2708,7 @@ city	Baetovo	41.2667	74.9570	KG	10682	Баетово	baetov|baetovo|bayetovo|dur
 city	Zardob	40.2184	47.7121	AZ	10612	Зардоб	zardob|зардаб|зардоб
 city	Dashkasan	40.5239	46.0819	AZ	10600	Дашкесан	dashkasan|dashkesan|dashkezan|verkhniy dashkesan|yukhary dashkesan|yukhary-dashkesan|yukharydashkesan|yuqori dashkesan|yuqori-dashkesan|yuqoridashkesan|дашкесан|жогаргы дәскесен|юкори дошкесан|юкори-дошкесан|юкоридошкесан|үстүнкү дашкесен|үстүнкү-дашкесен|үстүнкүдашкесен
 city	Bereket (TM)	37.8364	58.9077	TM	10597	Берекет	bereket|берекет
-city	Nishon Tumani	38.6940	65.6751	UZ	10558	Nishon Tumani	nishon district|nishon tumani|yangi nishan|yangi nishon|yangi-nishan|yangi-nishon|yanginishan|yanginishon
+city	Nishon	38.6940	65.6751	UZ	10558	Nishon Tumani	nishon district|nishon tumani|yangi nishan|yangi nishon|yangi-nishan|yangi-nishon|yanginishan|yanginishon
 city	Yagtyyol	37.8034	62.0229	TM	10488	Yagtyyol	yagty yel|yagty-yel|yagtyyel|yagtyyol
 city	Choyr	46.3611	108.3611	MN	10434	Чойр	choyr|sumbur|sumbur somon|sumbur sume|sumbur sumu|чойр
 city	Lugovoy	42.9420	72.7610	KZ	10422	Луговой	lugovka|lugovoy|lugovoye|lugowaja|луговой
@@ -2737,7 +2727,6 @@ city	Bulayevo	54.9060	70.4416	KZ	9886	Булаево	bulaev|bulayevo|булае�
 city	Qarabalyq	53.7502	62.0584	KZ	9838	Комсомолец	karabalyk|komsomolets|qarabalyq|карабалык|комсомолец
 city	Oytal	42.9057	73.2697	KZ	9821	Ойтал	oytal|ойтал
 city	Korday	43.0388	74.7129	KZ	9821	Кордай	korday|кордай
-city	Rezina	47.7486	28.9677	MD	9806	Резина	rezina|резина
 city	Bagtyyarlyk	37.4121	60.4353	TM	9804	Багтыярлык	bagtyyarlyk|багтыярлык
 city	Khodzha-Maston	38.7446	68.6270	TJ	9781	Khodzha-Maston	khodzha maston|khodzha-maston|khodzhamaston
 city	Myrzakent	40.6634	68.5451	KZ	9752	Мырзакент	mirzakent|myrzakent|slavyanski|slavyanskiy|slavyanskoye|мырзакент
@@ -2809,7 +2798,6 @@ city	Satlyk	37.6072	61.5939	TM	7725	Шатлык	satlyk|shatlyk|шатлык
 city	Stefan Voda	46.5129	29.6622	MD	7700	Штефан-Водэ	shtefan vode|shtefan-vode|shtefanvode|stefan voda|suvorovo|суворово|штефан вода|штефан водэ|штефан-вода|штефан-водэ|штефанвода|штефанводэ
 city	Mayqayyng	51.4598	75.8023	KZ	7695	Майкайн	maykain|maykainskiy|maykayn|mayqayyng|майкайн|майкайың
 city	Kazalinsk	45.7626	62.1033	KZ	7686	Казалинск	kasalinsk|kazalinsk|qazaly|казалинск|казалы
-city	Tuerkmenistan	38.1991	57.9499	TM	7666	Туркменистан	tuerkmenistan|туркменистан
 city	Bayganin	48.6897	55.8751	KZ	7657	Байганин	bayganin|karaulkel'dy|karaulkeldy|байганин
 city	Yardimli	38.9077	48.2405	AZ	7623	Ярдымлы	iardymly|yardimli|yardymly|йардимли|йардымлы|ярдымлы
 city	Goekcaege	42.0170	59.8554	TM	7569	Goekcaege	goekcaege|gokchage
@@ -2819,7 +2807,6 @@ city	Kyzyl-Bel'	40.0999	70.7405	KG	7481	Kyzyl-Bel’	kyzyl bel|kyzyl bel'|kyzyl-
 city	Sidqabad	35.0230	69.3511	AF	7407	Сидкабад	makhmudraki|sidkabad|sidqabad|sidqobod|сидкабад|сидкобод
 city	Obigarm	38.7173	69.7088	TJ	7400	Обигарм	obigarm|обигарм
 city	Mtskheta	41.8451	44.7188	GE	7380	Мцхета	msxeta|mtsheta|mtskhera|mtskheta|mtzkhet|mzcheta|мцхета
-city	Tuerkmenbasy (TM)	40.0086	53.1125	TM	7334	Tuerkmenbasy (TM)	tuerkmenbasy
 city	Osakarovka	50.5632	72.5728	KZ	7305	Осакаровка	osakarovka|oskarovka|осакаровка
 city	Yeghegnadzor	39.7644	45.3327	AM	7300	Ехегнадзор	keshishkend|mikoyan|yeghegik|yeghegnadzor|yekhegnadzor|егегнадзор|ехегнадзор
 city	Nyyazow	41.8393	60.1317	TM	7291	Nyyazow	nyyazow|shabat
@@ -2871,7 +2858,6 @@ city	Novaya Bukhtarma	49.6287	83.5210	KZ	6026	Новая Бухтарма	novaya
 city	Arcman	38.5435	57.1571	TM	6014	Арчман	archman|arcman|арчман
 city	Chapayev	50.1889	51.1698	KZ	6000	Чапаев	chapaev|chapayev|chapayevo|lbishchensk|lbishchenski|lbishchenskoye|чапаев
 city	Konsoy	40.4915	69.7024	TJ	6000	Консой	kaindisoy|kansai|kansay|konsoy|svints|консой
-city	Orzu	37.5582	68.8195	TJ	5988	Орзу	orzu|орзу
 city	Zhangaqala	49.2153	50.2901	KZ	5954	Джангала	dzhangala|kisik kamishen|kisik-kamishen|kisikkamishen|kisyk kamysh|kisyk kamyshskiy|kisyk-kamysh|kisyk-kamyshskiy|kisykkamys|kisykkamysh|kisykkamyshskiy|kysykkamys|kyysykkamys|zhangala|zhangaqala|джангала|жангала|жаңакала
 city	Borodulikha	50.7184	80.9295	KZ	5931	Бородулиха	borodulikha|бородулиха
 city	Hazratishoh	41.3946	71.7890	UZ	5900	Hazratishoh	hazratishoh|khazratsho|khazret sha|khazret-sha|khazretsha|xazratisho|xazratishoh
@@ -2967,7 +2953,6 @@ alias	Shamkhir						shamkhor rayonu|shamkhorskiy rayon|shamkir rayon
 alias	Kyurdarmir						kordamir tumani|kurdamir district|kyurdamirskiy rayon|кордамир районунун|кюрдамирский район|кюрдамирський район|кұрдамір ауданы|нохияи курдамир
 alias	Qabala						kabala rayonu|kutkashenskiy rayon|qabala district|qabala tumani|qutqashen rayonu|габалинский район|габалинський район|кабала ауданы|кабала районунун|нохияи кабала
 alias	Qusar						gil'skiy rayon|gilskiy rayon|kusar rayonu|kusarskiy rayon|qusar|qusar district|qusar rayonu|qusar tumani|гусарский район|гусарський район|кусар районунун|кұсар ауданы|нохияи кусор
-alias	Quba						kubinskiy rayon|quba|quba rayonu
 alias	Goygol						goygol rayon|khanlar rayonu|khanlarskiy rayon|narimanovskiy rayon
 alias	Xacmaz						khachmasskiy rayon|khachmaz rayonu|xacmaz
 alias	Kalbajar						kalbajar|kalbajar district|kalbajar tumani|kel'badzharskiy rayon|kelbadzharskiy rayon|калбаджар|кельбаджарский район|кельбаджарський район
@@ -3053,7 +3038,6 @@ alias	Stefan Voda						stefan voda|stefan-voda|stefanvoda|suvorovskiy rayon|ст
 alias	Straseni						straseni|strasheni|strashenskiy rayon|страшенский район|страшенський район|страшены|страшон|страшэнскі раен
 alias	Soroca						raionul soroca|soroca|soroca district|soroka rayoni|soroka rayonu|sorokskiy rayon|suryaka|suryaka ili|рахони сорока|сорока ауданы|сорока району|сорокский район|сороцький район
 alias	Riscani						riscani|riskani|ryshkanskiy rayon|рискани|ришканський район|рышканский район|рышканскі раен
-alias	Rezina						raionul rezina|rezina|rezina district|rezina ili|rezinskiy rayon|резина|резинский район|резинський район
 alias	Orhei						orgeyevskiy rayon|orhei|orhei district|orhey|raionul orhei|оргеевский район|орхей
 alias	Ocnita						oknitsa rayoni|oknitsa rayonu|oknitskiy rayon|raionul ocnita|окница ауданы|окница району|окницкий район|рахони окница
 alias	Anenii Noi						anenii noi|anenii noi district|anenii noi ili|anenii noy|bul'bokskiy rayon|bulbokskiy rayon|novoanenskiy rayon|novoannen rayonu|raionul anenii noi|анений ной|аненій нойський район|аненій-нойський район|аненійнойський район|новоаненский район

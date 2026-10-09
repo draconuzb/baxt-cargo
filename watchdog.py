@@ -6,6 +6,8 @@ watchdog.py — nazoratchi: tizimning biror qismi jimgina to'xtab qolmasin.
 Tekshiradi:
   • servislar (listener, bot, panel) ishlayaptimi;
   • panel javob beryaptimi (/health);
+  • listener osilib qolmadimi (yurak urishi, 5 daqiqa);
+  • bazaning kunlik zaxirasi yangimi (backups/, 30 soat);
   • yangi yuklar kelyaptimi (kunduzi 2 soat jimlik — listener uzilgan bo'lishi mumkin);
   • disk to'lib qolmadimi;
   • serverdagi kod qo'lda o'zgartirilmadimi (git).
@@ -104,7 +106,35 @@ def check_code() -> dict[str, str]:
     return {"code": f"Код на сервере изменён вручную: {files}"}
 
 
-CHECKS = (check_services, check_web, check_fresh_cargo, check_disk, check_code)
+LISTENER_SILENT_SEC = 300
+BACKUP_MAX_AGE_HOURS = 30
+
+
+def check_listener() -> dict[str, str]:
+    """Listener jarayoni tirik, lekin osilib qolgan bo'lishi mumkin (systemd "active"
+    deydi) — u har 30 s yurak urishini yozadi (`sources.heartbeat`)."""
+    import sources
+    seen = sources.last_seen_seconds()
+    if seen is not None and seen > LISTENER_SILENT_SEC:
+        return {"listener": f"Listener не отвечает {seen / 60:.0f} мин — группы не читаются"}
+    return {}
+
+
+def check_backup(backup_dir: str | None = None) -> dict[str, str]:
+    """Bazaning kunlik zaxirasi (deploy/backup.sh, cron). Papka bo'lmasa — tekshirilmaydi."""
+    import glob
+    folder = backup_dir or os.getenv("BACKUP_DIR") or str(config.BASE_DIR / "backups")
+    files = glob.glob(os.path.join(folder, "cargo-*.db.gz"))
+    if not os.path.isdir(folder) or not files:
+        return {}
+    age = (datetime.now().timestamp() - max(os.path.getmtime(f) for f in files)) / 3600
+    if age > BACKUP_MAX_AGE_HOURS:
+        return {"backup": f"Резервная копия базы не обновлялась {age:.0f} ч"}
+    return {}
+
+
+CHECKS = (check_services, check_web, check_listener, check_fresh_cargo, check_disk,
+          check_code, check_backup)
 
 
 # ---------------------------------------------------------------- holat

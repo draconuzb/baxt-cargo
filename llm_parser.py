@@ -254,8 +254,10 @@ def ask(text: str, today: date | None = None) -> dict | None:
         log.debug("LLM javobi keshdan olindi")
         return _cache[key]
     if not _budget_left():
-        log.warning("LLM kunlik chegarasi to'ldi (%s) — faqat regex ishlaydi",
-                    os.getenv("LLM_MAX_CALLS_PER_DAY", "300"))
+        if _calls.get("warned") != _calls["day"]:      # kuniga bir marta (19 ming qator edi)
+            _calls["warned"] = _calls["day"]
+            log.warning("LLM kunlik chegarasi to'ldi (%s) — bugun faqat regex ishlaydi",
+                        os.getenv("LLM_MAX_CALLS_PER_DAY", "300"))
         return None
 
     system = SYSTEM + f"\nBugungi sana: {(today or date.today()).isoformat()}"

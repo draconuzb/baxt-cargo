@@ -79,7 +79,10 @@ def _handle_one(cargo: parser.Cargo, notify: bool = True,
         # Regex uddalay olmadi. LLM ulangan bo'lsa — qayta urinib ko'ramiz.
         # Bo'sh mashina e'loni uchun so'ramaymiz: u bizga baribir kerak emas,
         # so'rasak esa har biri uchun pul ketadi.
-        if cargo.kind != "truck":
+        # Faqat yukka o'xshasa: shahar topilgan yoki vazn+narx bor. Ilgari kunlik
+        # 300 so'rov soat 10 gacha spam/reklamaga ketardi (audit 2026-10-09).
+        if cargo.kind != "truck" and (cargo.from_city or cargo.to_city
+                                      or (cargo.weight_t and cargo.rate)):
             try:
                 import llm_parser
                 if llm_parser.enabled():
@@ -133,23 +136,41 @@ def match_and_notify(cargo_id: int) -> list[dict]:
         reason = f"🔎 По вашему запросу: {watch['query'] or ''}".strip()
         db.touch_watch(watch["id"])
 
+    sent = False
     for r in results:
         match_id = db.save_match(cargo_id, r["truck_id"], r)
+        # Bitta yuk — bitta kartochka (eng yaxshi fura). Ilgari har mos fura uchun
+        # alohida kartochka ketardi: kuniga ~200 ta, bittasi ham olinmagan (audit 2026-10-09)
+        if sent or not match_id:
+            continue
         # Yo'ldagi fura uchun qaytish yuki: belgi va pastroq chegara (returns.py)
         return_reason = _return_reason(r["truck_id"])
         limit = min(threshold, returns_threshold()) if return_reason else threshold
-        if r["score"] >= limit and match_id:
-            # Bildirishnoma yuborilmasa ham moslik bazada qoladi — dispetcher
-            # uni `report` da ko'radi. Telegram xatosi oqimni to'xtatmaydi.
-            try:
-                why = _insight(cargo, r, results)
-                if notifier.notify_match(cargo, r, match_id, reason=reason or return_reason,
-                                         insight=why):
-                    db.mark_notified(match_id)
-            except Exception:
-                log.exception("Bildirishnoma yuborilmadi (moslik #%s)", match_id)
-            reason = None          # zanjirdagi qolgan mashinalarga takrorlamaymiz
+        if r["score"] < limit or not (watch is not None or worth_card(r)):
+            continue
+        # Bildirishnoma yuborilmasa ham moslik bazada qoladi — dispetcher
+        # uni `report` da ko'radi. Telegram xatosi oqimni to'xtatmaydi.
+        sent = True
+        try:
+            why = _insight(cargo, r, results)
+            if notifier.notify_match(cargo, r, match_id, reason=reason or return_reason,
+                                     insight=why):
+                db.mark_notified(match_id)
+        except Exception:
+            log.exception("Bildirishnoma yuborilmadi (moslik #%s)", match_id)
     return results
+
+
+def worth_card(result: dict) -> bool:
+    """Telegram kartochkasiga arziydimi: narxi ma'lum (shubhali emas) va foydali.
+
+    Narxsiz yuk ham 100 ballgacha oladi (30-qoida) — audit: kartochkalarning
+    74% narxsiz edi, dispetcher ularni o'qimay qo'ygan. Narxsiz yuk panelda
+    va qidiruvda ko'rinadi; dispetcher o'zi so'ragan yo'nalish (kuzatuv) bundan
+    mustasno — u har doim keladi.
+    """
+    per_day = result.get("margin_per_day")
+    return per_day is not None and per_day > 0 and not result.get("rate_suspect")
 
 
 def rematch_all(hours: int = 24, truck_ids: list[str] | None = None) -> int:

@@ -90,6 +90,11 @@ BLACKLIST = {
     "chelyabinsk",  # kuratorlik qilingan
     "mo", "мо", "нн", "kz", "uz", "ru", "rf", "рф",
     "ош",  # kuratorlik qilingan (KG), boshqa Oshga ketmasin
+    # audit 2026-10-09: kunlik matnda shaharga aylangan oddiy so'zlar
+    "хам", "хамма", "ham", "hamma", "хамм", "резина", "rezina", "куба", "kuba", "orzu", "орзу",
+    "улан", "ulan", "guli", "гули", "bulgan", "булган", "bo'lgan", "bolgan",
+    "juma", "жума", "payshamba", "пайшанба", "chelak", "челак", "nishon", "нишон",
+    "g'oliblar", "голиблар", "oliblar",
     "кара", "kara", "qora", "кора", "ала", "ala", "сары", "sary", "sariq", "сарик",
     "дон", "don", "волга", "volga", "урал", "ural", "сибирь", "sibir",
 }
@@ -109,11 +114,14 @@ def norm(s):
 
 
 def variants(alias):
-    """Uzbek/translit variantlari: o'->o/u, g'->g, defissiz."""
+    """Uzbek/translit variantlari: o' -> o'/o/u, g' -> g'/g (har biri alohida), defissiz."""
     out = {alias}
     if "'" in alias:
-        out.add(alias.replace("'", ""))
-        out.add(alias.replace("o'", "u").replace("g'", "g").replace("'", ""))
+        forms = {alias}
+        for src, dst in (("o'", ("o", "u")), ("g'", ("g",))):
+            forms |= {f.replace(src, d) for f in forms for d in dst}
+        out |= forms
+        out |= {f.replace("'", "") for f in forms}
     if "-" in alias:
         out.add(alias.replace("-", " "))
         out.add(alias.replace("-", ""))
@@ -122,6 +130,8 @@ def variants(alias):
 
 def ok_alias(a):
     if not a or len(a) < 3 or a in BLACKLIST or a in geo._STOPWORDS:
+        return False
+    if a in geo.COUNTRY_INDEX:            # davlat nomi shahar emas ("Туркменистан" shaharchasi)
         return False
     if not TOKEN_OK.match(a) or len(a.split()) > 3:
         return False
@@ -202,6 +212,8 @@ for gid, r in sorted(rows.items(), key=lambda kv: -kv[1]["pop"]):
     canon = canon_of.get(gid)
     if canon is None:
         base = (uz_latin(r) if r["cc"] == "UZ" else None) or r["ascii"] or r["name"]
+        # "Urgut Shahri", "Zomin Shaharchasi" -> "Urgut", "Zomin"
+        base = re.sub(r"\s+(?:Shahri|Shaharchasi|Shahar|Tumani|Qishlog'i)$", "", base)
         canon = base
         if canon in used:
             canon = f"{base} ({r['cc']})"
@@ -214,7 +226,10 @@ for gid, r in sorted(rows.items(), key=lambda kv: -kv[1]["pop"]):
             names.add(a)
     aliases = set()
     for n in names:
-        for v in variants(norm(n.replace("ʻ", "'").replace("’", "'"))):
+        n = norm(n.replace("ʻ", "'").replace("’", "'"))
+        # "urgut shahri" -> "urgut" ham (e'londa qo'shimchasiz yoziladi)
+        bare = re.sub(r"\s+(?:shahri|shaharchasi|shahar|tumani|qishlog'i|город)$", "", n)
+        for v in variants(n) | variants(bare):
             if ok_alias(v):
                 aliases.add(v)
     r["canon"] = canon
